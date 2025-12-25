@@ -26,9 +26,3 @@ export const TransactionHash = ({ hash }: { hash: string }) => {
     </div>
   );
 };
-
-
-
-
-
-

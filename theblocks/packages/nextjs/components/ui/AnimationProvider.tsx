@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, ReactNode, useState, useEffect } from "react";
+import { ReactNode, createContext, useContext, useEffect, useState } from "react";
 
 // ============================================
 // GLOBAL ANIMATION CONTEXT
@@ -47,12 +47,12 @@ interface AnimationProviderProps {
 /**
  * AnimationProvider - Global animation context provider
  * Wrap your app with this to enable universal scroll animations
- * 
+ *
  * Features:
  * - Respects user's reduced motion preference
  * - Global enable/disable toggle
  * - Page load detection for initial animations
- * 
+ *
  * @example
  * // In your layout.tsx or _app.tsx
  * <AnimationProvider>
@@ -66,7 +66,7 @@ export function AnimationProvider({ children }: AnimationProviderProps) {
   useEffect(() => {
     // Check for reduced motion preference
     const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
-    
+
     const updateReducedMotion = () => {
       setConfig(prev => ({
         ...prev,
@@ -91,11 +91,7 @@ export function AnimationProvider({ children }: AnimationProviderProps) {
     setConfig(prev => ({ ...prev, enabled }));
   };
 
-  return (
-    <AnimationContext.Provider value={{ config, isPageLoaded, setEnabled }}>
-      {children}
-    </AnimationContext.Provider>
-  );
+  return <AnimationContext.Provider value={{ config, isPageLoaded, setEnabled }}>{children}</AnimationContext.Provider>;
 }
 
 // ============================================
@@ -113,19 +109,13 @@ interface MotionProps {
 /**
  * Motion - Simple animated wrapper that uses global animation context
  * Automatically respects user's reduced motion preference
- * 
+ *
  * @example
  * <Motion animate="fadeIn" delay={200}>
  *   <div>This will fade in after 200ms</div>
  * </Motion>
  */
-export function Motion({ 
-  children, 
-  className = "", 
-  animate = "fadeIn",
-  delay = 0,
-  duration = 700 
-}: MotionProps) {
+export function Motion({ children, className = "", animate = "fadeIn", delay = 0, duration = 700 }: MotionProps) {
   const { config, isPageLoaded } = useAnimation();
   const [hasAnimated, setHasAnimated] = useState(false);
 
@@ -207,19 +197,13 @@ interface RevealProps {
 /**
  * Reveal - Scroll-triggered animation wrapper
  * Uses IntersectionObserver to trigger animations when element enters viewport
- * 
+ *
  * @example
  * <Reveal direction="up" delay={100}>
  *   <Card>Content that reveals on scroll</Card>
  * </Reveal>
  */
-export function Reveal({ 
-  children, 
-  className = "", 
-  direction = "up",
-  delay = 0,
-  threshold = 0.1 
-}: RevealProps) {
+export function Reveal({ children, className = "", direction = "up", delay = 0, threshold = 0.1 }: RevealProps) {
   const { config } = useAnimation();
   const [isVisible, setIsVisible] = useState(!config.enabled);
   const [ref, setRef] = useState<HTMLDivElement | null>(null);
@@ -237,31 +221,43 @@ export function Reveal({
           if (ref) observer.unobserve(ref);
         }
       },
-      { threshold, rootMargin: "0px 0px -50px 0px" }
+      { threshold, rootMargin: "0px 0px -50px 0px" },
     );
 
     if (ref) observer.observe(ref);
-    return () => { if (ref) observer.unobserve(ref); };
+    return () => {
+      if (ref) observer.unobserve(ref);
+    };
   }, [ref, threshold, config.enabled, config.reducedMotion]);
 
   const getTransform = () => {
     switch (direction) {
-      case "up": return "translateY(40px)";
-      case "down": return "translateY(-40px)";
-      case "left": return "translateX(40px)";
-      case "right": return "translateX(-40px)";
-      case "scale": return "scale(0.95)";
-      case "fade": return "none";
-      default: return "translateY(40px)";
+      case "up":
+        return "translateY(40px)";
+      case "down":
+        return "translateY(-40px)";
+      case "left":
+        return "translateX(40px)";
+      case "right":
+        return "translateX(-40px)";
+      case "scale":
+        return "scale(0.95)";
+      case "fade":
+        return "none";
+      default:
+        return "translateY(40px)";
     }
   };
 
-  const styles: React.CSSProperties = config.enabled && !config.reducedMotion ? {
-    opacity: isVisible ? 1 : 0,
-    transform: isVisible ? "none" : getTransform(),
-    transition: `opacity 600ms ease-out, transform 600ms ease-out`,
-    transitionDelay: `${delay}ms`,
-  } : {};
+  const styles: React.CSSProperties =
+    config.enabled && !config.reducedMotion
+      ? {
+          opacity: isVisible ? 1 : 0,
+          transform: isVisible ? "none" : getTransform(),
+          transition: `opacity 600ms ease-out, transform 600ms ease-out`,
+          transitionDelay: `${delay}ms`,
+        }
+      : {};
 
   return (
     <div ref={setRef} className={className} style={styles}>
@@ -269,9 +265,3 @@ export function Reveal({
     </div>
   );
 }
-
-
-
-
-
-

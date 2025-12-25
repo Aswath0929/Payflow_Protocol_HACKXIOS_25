@@ -605,9 +605,3 @@ export function SettlementSpeedDemo() {
     </div>
   );
 }
-
-
-
-
-
-

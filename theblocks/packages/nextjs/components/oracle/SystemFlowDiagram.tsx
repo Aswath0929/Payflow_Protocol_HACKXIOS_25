@@ -58,7 +58,11 @@ const steps: StepData[] = [
     title: "WEIGHTED CONSENSUS",
     icon: "🛡️",
     description: "Fault-tolerant price calculation",
-    details: ["Chainlink: 60% weight (industry standard)", "Pyth: 40% weight (real-time)", "Resistant to single oracle failure"],
+    details: [
+      "Chainlink: 60% weight (industry standard)",
+      "Pyth: 40% weight (real-time)",
+      "Resistant to single oracle failure",
+    ],
     color: "from-purple-400 to-pink-500",
     glowColor: "purple",
   },
@@ -454,9 +458,3 @@ export function SystemFlowDiagram() {
     </div>
   );
 }
-
-
-
-
-
-

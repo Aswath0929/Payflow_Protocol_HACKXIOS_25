@@ -19,9 +19,3 @@ export const AddressLogsTab = ({ address }: { address: Address }) => {
     </div>
   );
 };
-
-
-
-
-
-

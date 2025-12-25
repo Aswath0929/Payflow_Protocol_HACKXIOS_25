@@ -197,9 +197,3 @@ export const ProtocolStats = () => {
 };
 
 export default ProtocolStats;
-
-
-
-
-
-

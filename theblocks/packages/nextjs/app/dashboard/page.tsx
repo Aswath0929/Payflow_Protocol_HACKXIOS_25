@@ -8,6 +8,7 @@ import { useAccount } from "wagmi";
 import { RainbowKitCustomConnectButton } from "~~/components/scaffold-eth";
 import { StrikethroughFade } from "~~/components/ui/ComparisonReveal";
 import { ComplianceDemo, PaymentFlowDemo, SettlementSpeedDemo } from "~~/components/ui/LiveDemoWidget";
+import { AnimatedCounter, GlassmorphicCard, PulseRing } from "~~/components/ui/ModernEffects";
 import { ScrollReveal } from "~~/components/ui/ScrollReveal";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { useContractEvents } from "~~/hooks/settlement";
@@ -117,9 +118,10 @@ const Dashboard: NextPage = () => {
           recipient: event.args?.to
             ? `${String(event.args.to).slice(0, 6)}...${String(event.args.to).slice(-4)}`
             : "Multi-party",
-          amount: event.args?.amount && typeof event.args.amount === "bigint" 
-            ? Number(formatEther(event.args.amount)) * 2500 
-            : 0,
+          amount:
+            event.args?.amount && typeof event.args.amount === "bigint"
+              ? Number(formatEther(event.args.amount)) * 2500
+              : 0,
           token: "ETH",
           status:
             event.eventName.includes("Executed") || event.eventName.includes("Complete")
@@ -390,51 +392,52 @@ const Dashboard: NextPage = () => {
               </div>
             </ScrollReveal>
 
-            {/* Stats Grid */}
+            {/* Stats Grid - Glassmorphic Cards */}
             <div className="grid md:grid-cols-4 gap-4">
-              {[
-                {
-                  label: "Total Volume",
-                  value: `$${stats.totalVolume.toLocaleString()}`,
-                  color: "from-green-500 to-emerald-600",
-                  icon: "💰",
-                },
-                {
-                  label: "Pending",
-                  value: stats.pendingPayments.toString(),
-                  color: "from-yellow-500 to-orange-600",
-                  icon: "⏳",
-                },
-                {
-                  label: "Executed",
-                  value: stats.executedPayments.toString(),
-                  color: "from-blue-500 to-cyan-600",
-                  icon: "✅",
-                },
-                {
-                  label: "Avg Settlement",
-                  value: `${stats.avgSettlementTime.toFixed(1)}s`,
-                  color: "from-violet-500 to-purple-600",
-                  icon: "⚡",
-                },
-              ].map((stat, i) => (
-                <ScrollReveal key={stat.label} delay={i * 100} direction="up">
-                  <div className="group relative p-6 rounded-2xl bg-white/[0.02] border border-white/5 hover:border-white/10 transition-all duration-500 hover:-translate-y-1 h-full">
-                    <div
-                      className={`absolute -inset-px rounded-2xl bg-gradient-to-r ${stat.color} opacity-0 group-hover:opacity-10 transition-opacity duration-500 blur-xl`}
-                    />
-                    <div className="relative">
-                      <div className="flex items-center justify-between mb-3">
-                        <span className="text-zinc-400 text-sm">{stat.label}</span>
-                        <span className="text-2xl">{stat.icon}</span>
-                      </div>
-                      <p className={`text-3xl font-bold bg-gradient-to-r ${stat.color} bg-clip-text text-transparent`}>
-                        {stat.value}
-                      </p>
-                    </div>
+              <ScrollReveal delay={0} direction="up">
+                <GlassmorphicCard className="p-6 h-full" glowColor="rgba(34, 197, 94, 0.3)">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-zinc-400 text-sm">Total Volume</span>
+                    <span className="text-2xl">💰</span>
                   </div>
-                </ScrollReveal>
-              ))}
+                  <p className="text-3xl font-bold bg-gradient-to-r from-green-500 to-emerald-600 bg-clip-text text-transparent">
+                    $<AnimatedCounter value={stats.totalVolume} duration={2000} />
+                  </p>
+                </GlassmorphicCard>
+              </ScrollReveal>
+              <ScrollReveal delay={100} direction="up">
+                <GlassmorphicCard className="p-6 h-full" glowColor="rgba(234, 179, 8, 0.3)">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-zinc-400 text-sm">Pending</span>
+                    <span className="text-2xl">⏳</span>
+                  </div>
+                  <p className="text-3xl font-bold bg-gradient-to-r from-yellow-500 to-orange-600 bg-clip-text text-transparent">
+                    <AnimatedCounter value={stats.pendingPayments} duration={1500} />
+                  </p>
+                </GlassmorphicCard>
+              </ScrollReveal>
+              <ScrollReveal delay={200} direction="up">
+                <GlassmorphicCard className="p-6 h-full" glowColor="rgba(59, 130, 246, 0.3)">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-zinc-400 text-sm">Executed</span>
+                    <span className="text-2xl">✅</span>
+                  </div>
+                  <p className="text-3xl font-bold bg-gradient-to-r from-blue-500 to-cyan-600 bg-clip-text text-transparent">
+                    <AnimatedCounter value={stats.executedPayments} duration={1500} />
+                  </p>
+                </GlassmorphicCard>
+              </ScrollReveal>
+              <ScrollReveal delay={300} direction="up">
+                <GlassmorphicCard className="p-6 h-full" glowColor="rgba(139, 92, 246, 0.3)">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-zinc-400 text-sm">Avg Settlement</span>
+                    <span className="text-2xl">⚡</span>
+                  </div>
+                  <p className="text-3xl font-bold bg-gradient-to-r from-violet-500 to-purple-600 bg-clip-text text-transparent">
+                    <AnimatedCounter value={stats.avgSettlementTime} decimals={1} duration={1500} suffix="s" />
+                  </p>
+                </GlassmorphicCard>
+              </ScrollReveal>
             </div>
 
             {/* Quick Actions */}
@@ -468,21 +471,18 @@ const Dashboard: NextPage = () => {
                   </h3>
                   <div className="space-y-3">
                     {[
-                      { name: "Compliance Engine", status: "Active", color: "text-green-400" },
-                      { name: "Oracle Aggregator", status: "5 sources", color: "text-green-400" },
-                      { name: "Smart Escrow", status: "Ready", color: "text-green-400" },
-                      { name: "Audit Registry", status: "Logging", color: "text-green-400" },
+                      { name: "Compliance Engine", status: "Active", color: "green" as const },
+                      { name: "Oracle Aggregator", status: "5 sources", color: "green" as const },
+                      { name: "Smart Escrow", status: "Ready", color: "green" as const },
+                      { name: "Audit Registry", status: "Logging", color: "green" as const },
                     ].map(item => (
                       <div
                         key={item.name}
                         className="flex justify-between items-center py-2 border-b border-white/5 last:border-0"
                       >
                         <span className="text-zinc-400">{item.name}</span>
-                        <span className={`${item.color} flex items-center gap-1`}>
-                          <span className="relative flex h-2 w-2">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                            <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-                          </span>
+                        <span className="text-green-400 flex items-center gap-2">
+                          <PulseRing color={item.color} size={8} />
                           {item.status}
                         </span>
                       </div>
@@ -1067,9 +1067,3 @@ const Dashboard: NextPage = () => {
 };
 
 export default Dashboard;
-
-
-
-
-
-

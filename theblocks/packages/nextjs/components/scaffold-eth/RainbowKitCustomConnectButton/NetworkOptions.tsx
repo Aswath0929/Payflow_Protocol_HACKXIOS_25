@@ -46,9 +46,3 @@ export const NetworkOptions = ({ hidden = false }: NetworkOptionsProps) => {
     </>
   );
 };
-
-
-
-
-
-

@@ -12,6 +12,8 @@ import { Footer } from "~~/components/Footer";
 import { Header } from "~~/components/Header";
 import { BlockieAvatar } from "~~/components/scaffold-eth";
 import { AnimationProvider } from "~~/components/ui/AnimationProvider";
+import { MagicCursor } from "~~/components/ui/MagicCursor";
+import { NeuralNetworkBackground } from "~~/components/ui/NeuralNetworkBackground";
 import { wagmiConfig } from "~~/services/web3/wagmiConfig";
 
 const ScaffoldEthApp = ({ children }: { children: React.ReactNode }) => {
@@ -21,12 +23,38 @@ const ScaffoldEthApp = ({ children }: { children: React.ReactNode }) => {
 
   return (
     <>
-      <div className={`flex flex-col min-h-screen`}>
+      {/* AI-Era Background Effects */}
+      <NeuralNetworkBackground />
+      <MagicCursor />
+
+      <div className={`flex flex-col min-h-screen relative z-10`}>
         {!isLandingPage && <Header />}
         <main className="relative flex flex-col flex-1">{children}</main>
         {!isLandingPage && <Footer />}
       </div>
-      <Toaster />
+      <Toaster
+        position="bottom-right"
+        toastOptions={{
+          style: {
+            background: "rgba(18, 18, 26, 0.95)",
+            color: "#fff",
+            border: "1px solid rgba(139, 92, 246, 0.3)",
+            backdropFilter: "blur(10px)",
+          },
+          success: {
+            iconTheme: {
+              primary: "#22c55e",
+              secondary: "#fff",
+            },
+          },
+          error: {
+            iconTheme: {
+              primary: "#ef4444",
+              secondary: "#fff",
+            },
+          },
+        }}
+      />
     </>
   );
 };
@@ -64,9 +92,3 @@ export const ScaffoldEthAppWithProviders = ({ children }: { children: React.Reac
     </WagmiProvider>
   );
 };
-
-
-
-
-
-

@@ -208,7 +208,9 @@ export const AdminPanel = () => {
           </div>
 
           {/* Circuit Breaker */}
-          <div className={`p-4 rounded-lg border ${cbTriggers > 0 ? "border-warning bg-warning/10" : "border-success bg-success/10"}`}>
+          <div
+            className={`p-4 rounded-lg border ${cbTriggers > 0 ? "border-warning bg-warning/10" : "border-success bg-success/10"}`}
+          >
             <div className="flex items-center gap-2 mb-2">
               <span className="text-xl">⚡</span>
               <span className="font-semibold">Circuit Breaker</span>
@@ -250,9 +252,3 @@ export const AdminPanel = () => {
 };
 
 export default AdminPanel;
-
-
-
-
-
-

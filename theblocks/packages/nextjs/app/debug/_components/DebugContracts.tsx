@@ -69,9 +69,3 @@ export function DebugContracts() {
     </div>
   );
 }
-
-
-
-
-
-

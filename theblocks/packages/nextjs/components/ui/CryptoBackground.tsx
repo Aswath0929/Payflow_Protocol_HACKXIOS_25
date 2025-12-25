@@ -422,9 +422,3 @@ export function GlowingOrbs() {
     </div>
   );
 }
-
-
-
-
-
-

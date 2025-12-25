@@ -82,13 +82,19 @@ export const AddressInfoDropdown = ({
             </div>
           </li>
           <li className={selectingNetwork ? "hidden" : ""}>
-            <label htmlFor="qrcode-modal" className="h-10 rounded-lg flex items-center gap-3 px-3 text-zinc-300 hover:bg-white/5 hover:text-white transition-colors cursor-pointer">
+            <label
+              htmlFor="qrcode-modal"
+              className="h-10 rounded-lg flex items-center gap-3 px-3 text-zinc-300 hover:bg-white/5 hover:text-white transition-colors cursor-pointer"
+            >
               <QrCodeIcon className="h-5 w-5" />
               <span className="whitespace-nowrap text-sm">View QR Code</span>
             </label>
           </li>
           <li className={selectingNetwork ? "hidden" : ""}>
-            <button className="h-10 rounded-lg flex items-center gap-3 px-3 text-zinc-300 hover:bg-white/5 hover:text-white transition-colors w-full" type="button">
+            <button
+              className="h-10 rounded-lg flex items-center gap-3 px-3 text-zinc-300 hover:bg-white/5 hover:text-white transition-colors w-full"
+              type="button"
+            >
               <ArrowTopRightOnSquareIcon className="h-5 w-5" />
               <a
                 target="_blank"
@@ -115,7 +121,10 @@ export const AddressInfoDropdown = ({
           ) : null}
           {connector?.id === BURNER_WALLET_ID ? (
             <li>
-              <label htmlFor="reveal-burner-pk-modal" className="h-10 rounded-lg flex items-center gap-3 px-3 text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer">
+              <label
+                htmlFor="reveal-burner-pk-modal"
+                className="h-10 rounded-lg flex items-center gap-3 px-3 text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer"
+              >
                 <EyeIcon className="h-5 w-5" />
                 <span className="text-sm">Reveal Private Key</span>
               </label>
@@ -135,9 +144,3 @@ export const AddressInfoDropdown = ({
     </>
   );
 };
-
-
-
-
-
-

@@ -61,9 +61,9 @@ export const FaucetButton = () => {
       }
       data-tip="Grab funds from faucet"
     >
-      <button 
-        className="p-2.5 rounded-xl bg-gradient-to-r from-green-600/20 to-emerald-600/20 border border-green-500/30 text-green-400 hover:opacity-80 transition-opacity" 
-        onClick={sendETH} 
+      <button
+        className="p-2.5 rounded-xl bg-gradient-to-r from-green-600/20 to-emerald-600/20 border border-green-500/30 text-green-400 hover:opacity-80 transition-opacity"
+        onClick={sendETH}
         disabled={loading}
       >
         {!loading ? (
@@ -75,9 +75,3 @@ export const FaucetButton = () => {
     </div>
   );
 };
-
-
-
-
-
-

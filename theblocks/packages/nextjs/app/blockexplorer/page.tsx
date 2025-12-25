@@ -81,9 +81,3 @@ const BlockExplorer: NextPage = () => {
 };
 
 export default BlockExplorer;
-
-
-
-
-
-

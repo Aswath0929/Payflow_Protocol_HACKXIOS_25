@@ -164,9 +164,3 @@ export const EventFeed = ({ maxEvents = 20, showFilters = true, compact = false 
 };
 
 export default EventFeed;
-
-
-
-
-
-

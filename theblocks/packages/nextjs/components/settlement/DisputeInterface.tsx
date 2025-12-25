@@ -83,16 +83,18 @@ export const DisputeInterface = () => {
   });
 
   // Parse payment details
-  const payment = paymentDetails as {
-    paymentId: `0x${string}`;
-    sender: `0x${string}`;
-    recipient: `0x${string}`;
-    token: `0x${string}`;
-    amount: bigint;
-    status: number;
-    createdAt: bigint;
-    executedAt: bigint;
-  } | undefined;
+  const payment = paymentDetails as
+    | {
+        paymentId: `0x${string}`;
+        sender: `0x${string}`;
+        recipient: `0x${string}`;
+        token: `0x${string}`;
+        amount: bigint;
+        status: number;
+        createdAt: bigint;
+        executedAt: bigint;
+      }
+    | undefined;
 
   const paymentStatus = payment ? PAYMENT_STATUS[payment.status] || "UNKNOWN" : "UNKNOWN";
   const isDisputable = payment && (paymentStatus === "PENDING" || paymentStatus === "APPROVED");
@@ -149,7 +151,9 @@ export const DisputeInterface = () => {
         </div>
         <div className="flex justify-between items-center mt-1">
           <span className="text-sm">Your Payments (Sent/Received):</span>
-          <span className="font-bold">{sentPayments.length} / {receivedPayments.length}</span>
+          <span className="font-bold">
+            {sentPayments.length} / {receivedPayments.length}
+          </span>
         </div>
       </div>
 
@@ -206,10 +210,16 @@ export const DisputeInterface = () => {
           </div>
           <div className="text-sm opacity-70 space-y-1">
             <p>
-              From: <code className="text-xs">{payment.sender.slice(0, 10)}...{payment.sender.slice(-8)}</code>
+              From:{" "}
+              <code className="text-xs">
+                {payment.sender.slice(0, 10)}...{payment.sender.slice(-8)}
+              </code>
             </p>
             <p>
-              To: <code className="text-xs">{payment.recipient.slice(0, 10)}...{payment.recipient.slice(-8)}</code>
+              To:{" "}
+              <code className="text-xs">
+                {payment.recipient.slice(0, 10)}...{payment.recipient.slice(-8)}
+              </code>
             </p>
             <p>Amount: {formatUnits(payment.amount, 18)} tokens</p>
             <p>Created: {new Date(Number(payment.createdAt) * 1000).toLocaleString()}</p>
@@ -269,8 +279,8 @@ export const DisputeInterface = () => {
               <div>
                 <h4 className="font-semibold text-info">Coming Soon</h4>
                 <p className="text-sm opacity-80">
-                  On-chain dispute resolution is planned for the next protocol version. 
-                  For now, disputes are logged for review.
+                  On-chain dispute resolution is planned for the next protocol version. For now, disputes are logged for
+                  review.
                 </p>
               </div>
             </div>
@@ -309,9 +319,3 @@ export const DisputeInterface = () => {
 };
 
 export default DisputeInterface;
-
-
-
-
-
-

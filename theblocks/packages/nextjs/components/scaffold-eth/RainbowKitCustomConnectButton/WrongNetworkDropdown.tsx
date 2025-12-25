@@ -30,9 +30,3 @@ export const WrongNetworkDropdown = () => {
     </div>
   );
 };
-
-
-
-
-
-

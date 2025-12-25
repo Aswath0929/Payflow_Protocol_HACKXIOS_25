@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { createPublicClient, http } from "viem";
 import { sepolia } from "viem/chains";
+import { ScrollReveal } from "~~/components/ui/ScrollReveal";
 import {
   ASSET_CATEGORIES,
   CHAINLINK_ABI,
@@ -15,7 +16,6 @@ import {
   type PythFeedKey,
   SMART_ORACLE_SELECTOR_ABI,
 } from "~~/config/priceFeeds";
-import { ScrollReveal } from "~~/components/ui/ScrollReveal";
 
 // Create Sepolia public client
 const sepoliaClient = createPublicClient({
@@ -554,33 +554,33 @@ export function ThreeOracleDashboard() {
                       ? "bg-gradient-to-br from-cyan-500/30 to-purple-500/30 border-2 border-cyan-500/50"
                       : "bg-white/5 border border-white/10 hover:bg-white/10"
                   }`}
-              >
-                <span className="text-2xl">{useCase.icon}</span>
-                <p className="font-semibold mt-2">{useCase.label}</p>
-                <p className="text-xs text-gray-400">{useCase.desc}</p>
-              </button>
-            ))}
-          </div>
-
-          {/* Smart Selection Result */}
-          {smartSelection && (
-            <div className="mt-6 p-4 bg-gradient-to-r from-green-500/10 to-cyan-500/10 border border-green-500/30 rounded-xl">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-green-300 font-semibold">✨ BFT Consensus Price</span>
-                <span className="text-2xl font-bold text-white">{formatPrice(smartSelection.aggregatedPrice)}</span>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {smartSelection.selectedOracles.map((name, idx) => (
-                  <span key={idx} className="px-3 py-1 bg-white/10 rounded-full text-sm flex items-center gap-2">
-                    {oracles.find(o => o.name === name)?.icon} {name}
-                    <span className="text-xs text-gray-400">({smartSelection.scores[idx]})</span>
-                  </span>
-                ))}
-              </div>
+                >
+                  <span className="text-2xl">{useCase.icon}</span>
+                  <p className="font-semibold mt-2">{useCase.label}</p>
+                  <p className="text-xs text-gray-400">{useCase.desc}</p>
+                </button>
+              ))}
             </div>
-          )}
+
+            {/* Smart Selection Result */}
+            {smartSelection && (
+              <div className="mt-6 p-4 bg-gradient-to-r from-green-500/10 to-cyan-500/10 border border-green-500/30 rounded-xl">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-green-300 font-semibold">✨ BFT Consensus Price</span>
+                  <span className="text-2xl font-bold text-white">{formatPrice(smartSelection.aggregatedPrice)}</span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {smartSelection.selectedOracles.map((name, idx) => (
+                    <span key={idx} className="px-3 py-1 bg-white/10 rounded-full text-sm flex items-center gap-2">
+                      {oracles.find(o => o.name === name)?.icon} {name}
+                      <span className="text-xs text-gray-400">({smartSelection.scores[idx]})</span>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
       </ScrollReveal>
 
       {/* Three Oracle Cards */}
@@ -667,7 +667,9 @@ export function ThreeOracleDashboard() {
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="bg-white/5 rounded-xl p-4">
                   <p className="text-gray-400 text-sm">Last Aggregated Price</p>
-                  <p className="text-xl font-bold text-blue-400">{formatPrice(smartSelectorContract.aggregatedPrice)}</p>
+                  <p className="text-xl font-bold text-blue-400">
+                    {formatPrice(smartSelectorContract.aggregatedPrice)}
+                  </p>
                 </div>
                 <div className="bg-white/5 rounded-xl p-4">
                   <p className="text-gray-400 text-sm">On-Chain Confidence</p>
@@ -689,8 +691,8 @@ export function ThreeOracleDashboard() {
 
               <div className="mt-4 p-3 bg-gradient-to-r from-indigo-500/10 to-purple-500/10 border border-indigo-500/30 rounded-lg">
                 <p className="text-sm text-gray-300">
-                  <span className="text-indigo-400 font-semibold">ℹ️ Live Contract:</span> This data is read directly from
-                  the SmartOracleSelector contract at{" "}
+                  <span className="text-indigo-400 font-semibold">ℹ️ Live Contract:</span> This data is read directly
+                  from the SmartOracleSelector contract at{" "}
                   <code className="text-xs bg-black/30 px-2 py-1 rounded">{CONTRACTS.smartOracleSelector}</code>
                 </p>
               </div>
@@ -705,84 +707,84 @@ export function ThreeOracleDashboard() {
           <div className="absolute -inset-0.5 bg-gradient-to-r from-amber-600 via-orange-600 to-red-600 rounded-2xl blur opacity-30 group-hover:opacity-50 transition duration-300" />
           <div className="relative bg-gray-900/90 backdrop-blur-xl border border-white/10 rounded-2xl p-6">
             <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
-            <span>📊</span> Multi-Asset Price Explorer
-          </h3>
+              <span>📊</span> Multi-Asset Price Explorer
+            </h3>
 
-          {/* Category Tabs */}
-          <div className="flex flex-wrap gap-2 mb-6">
-            {Object.entries(ASSET_CATEGORIES).map(([key, cat]) => (
-              <button
-                key={key}
-                onClick={() => setSelectedCategory(key)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                  selectedCategory === key
-                    ? "bg-gradient-to-r from-amber-500/30 to-orange-500/30 border border-amber-500/50"
-                    : "bg-white/5 border border-white/10 hover:bg-white/10"
-                }`}
-              >
-                {cat.icon} {cat.label}
-              </button>
-            ))}
-          </div>
+            {/* Category Tabs */}
+            <div className="flex flex-wrap gap-2 mb-6">
+              {Object.entries(ASSET_CATEGORIES).map(([key, cat]) => (
+                <button
+                  key={key}
+                  onClick={() => setSelectedCategory(key)}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                    selectedCategory === key
+                      ? "bg-gradient-to-r from-amber-500/30 to-orange-500/30 border border-amber-500/50"
+                      : "bg-white/5 border border-white/10 hover:bg-white/10"
+                  }`}
+                >
+                  {cat.icon} {cat.label}
+                </button>
+              ))}
+            </div>
 
-          {/* Price Table */}
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-white/10">
-                  <th className="text-left py-3 px-4 text-gray-400 font-medium">Asset</th>
-                  <th className="text-right py-3 px-4 text-gray-400 font-medium">Chainlink</th>
-                  <th className="text-right py-3 px-4 text-gray-400 font-medium">Pyth</th>
-                  <th className="text-right py-3 px-4 text-gray-400 font-medium">Deviation</th>
-                  <th className="text-right py-3 px-4 text-gray-400 font-medium">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {multiAssetPrices.map((asset, idx) => (
-                  <tr key={idx} className="border-b border-white/5 hover:bg-white/5">
-                    <td className="py-3 px-4 font-medium">{asset.symbol}</td>
-                    <td className="text-right py-3 px-4 font-mono text-blue-300">
-                      {formatPrice(asset.chainlinkPrice)}
-                    </td>
-                    <td className="text-right py-3 px-4 font-mono text-purple-300">{formatPrice(asset.pythPrice)}</td>
-                    <td
-                      className={`text-right py-3 px-4 font-mono ${
-                        !asset.deviation
-                          ? "text-gray-500"
-                          : asset.deviation < 0.1
-                            ? "text-green-400"
-                            : asset.deviation < 0.5
-                              ? "text-yellow-400"
-                              : "text-red-400"
-                      }`}
-                    >
-                      {asset.deviation ? `${asset.deviation.toFixed(3)}%` : "--"}
-                    </td>
-                    <td className="text-right py-3 px-4">
-                      <span
-                        className={`px-2 py-1 rounded-full text-xs ${
-                          asset.status === "live"
-                            ? "bg-green-500/20 text-green-300"
-                            : asset.status === "stale"
-                              ? "bg-yellow-500/20 text-yellow-300"
-                              : "bg-red-500/20 text-red-300"
+            {/* Price Table */}
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-white/10">
+                    <th className="text-left py-3 px-4 text-gray-400 font-medium">Asset</th>
+                    <th className="text-right py-3 px-4 text-gray-400 font-medium">Chainlink</th>
+                    <th className="text-right py-3 px-4 text-gray-400 font-medium">Pyth</th>
+                    <th className="text-right py-3 px-4 text-gray-400 font-medium">Deviation</th>
+                    <th className="text-right py-3 px-4 text-gray-400 font-medium">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {multiAssetPrices.map((asset, idx) => (
+                    <tr key={idx} className="border-b border-white/5 hover:bg-white/5">
+                      <td className="py-3 px-4 font-medium">{asset.symbol}</td>
+                      <td className="text-right py-3 px-4 font-mono text-blue-300">
+                        {formatPrice(asset.chainlinkPrice)}
+                      </td>
+                      <td className="text-right py-3 px-4 font-mono text-purple-300">{formatPrice(asset.pythPrice)}</td>
+                      <td
+                        className={`text-right py-3 px-4 font-mono ${
+                          !asset.deviation
+                            ? "text-gray-500"
+                            : asset.deviation < 0.1
+                              ? "text-green-400"
+                              : asset.deviation < 0.5
+                                ? "text-yellow-400"
+                                : "text-red-400"
                         }`}
                       >
-                        {asset.status.toUpperCase()}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                        {asset.deviation ? `${asset.deviation.toFixed(3)}%` : "--"}
+                      </td>
+                      <td className="text-right py-3 px-4">
+                        <span
+                          className={`px-2 py-1 rounded-full text-xs ${
+                            asset.status === "live"
+                              ? "bg-green-500/20 text-green-300"
+                              : asset.status === "stale"
+                                ? "bg-yellow-500/20 text-yellow-300"
+                                : "bg-red-500/20 text-red-300"
+                          }`}
+                        >
+                          {asset.status.toUpperCase()}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
 
-          <p className="text-xs text-gray-500 mt-4">
-            📡 {Object.keys(CHAINLINK_FEEDS).length} Chainlink feeds • 🔮 {Object.keys(PYTH_FEED_IDS).length} Pyth feeds
-            available
-          </p>
+            <p className="text-xs text-gray-500 mt-4">
+              📡 {Object.keys(CHAINLINK_FEEDS).length} Chainlink feeds • 🔮 {Object.keys(PYTH_FEED_IDS).length} Pyth
+              feeds available
+            </p>
+          </div>
         </div>
-      </div>
       </ScrollReveal>
 
       {/* Deployed Contracts */}
@@ -977,9 +979,3 @@ function OracleCardSkeleton() {
     </div>
   );
 }
-
-
-
-
-
-

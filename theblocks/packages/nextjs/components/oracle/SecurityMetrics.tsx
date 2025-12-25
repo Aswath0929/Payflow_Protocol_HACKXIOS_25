@@ -203,8 +203,8 @@ export function SecurityMetrics() {
             <div>
               <p className="font-medium text-yellow-300">Contract Not Connected</p>
               <p className="text-sm text-yellow-300/70">
-                GuardianOracleV2 metrics unavailable. Stats show 0 because no real attacks have been encountered yet. The
-                attack counters will increment when actual manipulation attempts occur.
+                GuardianOracleV2 metrics unavailable. Stats show 0 because no real attacks have been encountered yet.
+                The attack counters will increment when actual manipulation attempts occur.
               </p>
             </div>
           </div>
@@ -274,29 +274,34 @@ export function SecurityMetrics() {
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
                   <span
-                  className={`text-4xl font-bold ${confidence ? getScoreColor(confidence.totalConfidence) : "text-gray-400"}`}
-                >
-                  {loading ? "--" : confidence?.totalConfidence || 0}
-                </span>
-                <span className="text-sm text-gray-400">/100</span>
+                    className={`text-4xl font-bold ${confidence ? getScoreColor(confidence.totalConfidence) : "text-gray-400"}`}
+                  >
+                    {loading ? "--" : confidence?.totalConfidence || 0}
+                  </span>
+                  <span className="text-sm text-gray-400">/100</span>
+                </div>
               </div>
-            </div>
 
-            {/* Score Breakdown */}
-            <div className="flex-1 space-y-4 w-full">
-              <ScoreBar label="Oracle Agreement" value={confidence?.oracleAgreement || 0} icon="🔗" loading={loading} />
-              <ScoreBar label="Data Freshness" value={confidence?.freshnessScore || 0} icon="⏱️" loading={loading} />
-              <ScoreBar
-                label="Volatility Control"
-                value={confidence?.volatilityScore || 0}
-                icon="📊"
-                loading={loading}
-              />
-              <ScoreBar label="TWAP Alignment" value={confidence?.twapDeviation || 0} icon="📈" loading={loading} />
+              {/* Score Breakdown */}
+              <div className="flex-1 space-y-4 w-full">
+                <ScoreBar
+                  label="Oracle Agreement"
+                  value={confidence?.oracleAgreement || 0}
+                  icon="🔗"
+                  loading={loading}
+                />
+                <ScoreBar label="Data Freshness" value={confidence?.freshnessScore || 0} icon="⏱️" loading={loading} />
+                <ScoreBar
+                  label="Volatility Control"
+                  value={confidence?.volatilityScore || 0}
+                  icon="📊"
+                  loading={loading}
+                />
+                <ScoreBar label="TWAP Alignment" value={confidence?.twapDeviation || 0} icon="📈" loading={loading} />
+              </div>
             </div>
           </div>
         </div>
-      </div>
       </ScrollReveal>
 
       {/* Circuit Breaker Status */}
@@ -379,7 +384,12 @@ export function SecurityMetrics() {
             icon="📡"
             color="cyan"
           />
-          <StatCard title="Attacks Blocked" value={metrics?.attacksBlocked?.toString() || "--"} icon="🛡️" color="green" />
+          <StatCard
+            title="Attacks Blocked"
+            value={metrics?.attacksBlocked?.toString() || "--"}
+            icon="🛡️"
+            color="green"
+          />
           <StatCard title="Avg Confidence" value={`${metrics?.avgConfidence || "--"}%`} icon="📈" color="purple" />
           <StatCard title="Volatility" value={`${metrics?.volatilityScore || "--"}%`} icon="📉" color="orange" />
         </div>
@@ -426,25 +436,25 @@ export function SecurityMetrics() {
                     <span className="text-2xl">🤖</span>
                   </div>
                   <div>
-                  <h4 className="font-bold">Layer 2: AI Guardian</h4>
-                  <p className="text-xs text-gray-400">Machine Learning Security</p>
+                    <h4 className="font-bold">Layer 2: AI Guardian</h4>
+                    <p className="text-xs text-gray-400">Machine Learning Security</p>
+                  </div>
                 </div>
+                <ul className="space-y-2 text-sm text-gray-300">
+                  <li className="flex items-center gap-2">
+                    <span className="text-green-400">✓</span> Flash Loan Detection
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="text-green-400">✓</span> TWAP Deviation Analysis
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="text-green-400">✓</span> Circuit Breaker Logic
+                  </li>
+                </ul>
               </div>
-              <ul className="space-y-2 text-sm text-gray-300">
-                <li className="flex items-center gap-2">
-                  <span className="text-green-400">✓</span> Flash Loan Detection
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="text-green-400">✓</span> TWAP Deviation Analysis
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="text-green-400">✓</span> Circuit Breaker Logic
-                </li>
-              </ul>
             </div>
           </div>
         </div>
-      </div>
       </ScrollReveal>
     </div>
   );
@@ -531,9 +541,3 @@ function StatCard({ title, value, icon, color }: { title: string; value: string;
     </div>
   );
 }
-
-
-
-
-
-

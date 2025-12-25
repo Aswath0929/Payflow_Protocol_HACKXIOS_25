@@ -32,9 +32,9 @@ export const RainbowKitCustomConnectButton = () => {
             {(() => {
               if (!connected) {
                 return (
-                  <button 
-                    className="px-6 py-2.5 rounded-xl font-medium bg-gradient-to-r from-violet-600 to-cyan-600 text-white hover:opacity-90 transition-all duration-300 shadow-lg shadow-violet-500/20" 
-                    onClick={openConnectModal} 
+                  <button
+                    className="px-6 py-2.5 rounded-xl font-medium bg-gradient-to-r from-violet-600 to-cyan-600 text-white hover:opacity-90 transition-all duration-300 shadow-lg shadow-violet-500/20"
+                    onClick={openConnectModal}
                     type="button"
                   >
                     Connect Wallet
@@ -79,9 +79,3 @@ export const RainbowKitCustomConnectButton = () => {
     </ConnectButton.Custom>
   );
 };
-
-
-
-
-
-

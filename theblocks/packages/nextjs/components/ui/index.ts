@@ -15,12 +15,7 @@ export {
 } from "./ScrollReveal";
 
 // Global Animation Context
-export {
-  AnimationProvider,
-  useAnimation,
-  Motion,
-  Reveal,
-} from "./AnimationProvider";
+export { AnimationProvider, useAnimation, Motion, Reveal } from "./AnimationProvider";
 
 // Live Demo Widgets
 export {
@@ -44,8 +39,33 @@ export {
   NarrativeBadge,
 } from "./Narrative";
 
+// Modern AI-Era Effects
+export {
+  GlassmorphicCard,
+  FloatingElement,
+  MorphingBlob,
+  AnimatedCounter,
+  PulseRing,
+  TypewriterText,
+} from "./ModernEffects";
 
+// Particle Field & Interactive Effects
+export { ParticleField, FloatingOrb, MagneticButton, RippleButton } from "./ParticleField";
 
+// Advanced Animations & Scroll Effects
+export {
+  ScrollProgress,
+  SectionNav,
+  Parallax,
+  TextReveal,
+  StaggeredList,
+  TiltCard,
+  InfiniteScroll,
+  Spotlight,
+} from "./AdvancedAnimations";
 
+// Neural Network Background
+export { NeuralNetworkBackground } from "./NeuralNetworkBackground";
 
-
+// Magic Cursor
+export { MagicCursor } from "./MagicCursor";

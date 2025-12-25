@@ -334,9 +334,3 @@ export function StrikethroughFade({ problem, solution, className = "" }: Striket
 }
 
 export default ComparisonReveal;
-
-
-
-
-
-

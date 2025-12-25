@@ -5,9 +5,3 @@ export * from "./TransactionHash";
 export * from "./ContractTabs";
 export * from "./PaginationButton";
 export * from "./TransactionsTable";
-
-
-
-
-
-

@@ -147,12 +147,7 @@ export const InvariantStatus = ({ settlementId }: InvariantStatusProps) => {
     );
 
     // Refetch all data
-    await Promise.all([
-      refetchProtocolStats(),
-      refetchPaused(),
-      refetchOracleStats(),
-      refetchCircuitBreaker(),
-    ]);
+    await Promise.all([refetchProtocolStats(), refetchPaused(), refetchOracleStats(), refetchCircuitBreaker()]);
 
     // Parse contract data
     const stats = protocolStats as [bigint, bigint, bigint, bigint] | undefined;
@@ -250,11 +245,7 @@ export const InvariantStatus = ({ settlementId }: InvariantStatusProps) => {
             {settlementId ? `Settlement #${settlementId.toString()}` : "Protocol-wide checks"}
           </p>
         </div>
-        <button
-          className="btn btn-primary btn-sm"
-          onClick={handleCheckAll}
-          disabled={isCheckingAll || !contractsReady}
-        >
+        <button className="btn btn-primary btn-sm" onClick={handleCheckAll} disabled={isCheckingAll || !contractsReady}>
           {isCheckingAll ? (
             <span className="loading loading-spinner loading-sm"></span>
           ) : !contractsReady ? (
@@ -331,13 +322,9 @@ export const InvariantStatus = ({ settlementId }: InvariantStatusProps) => {
       {/* Contract Status */}
       <div className="mt-6 pt-4 border-t border-base-300">
         <div className="flex items-center gap-2 text-sm">
-          <span className={contractsReady ? "text-success" : "text-warning"}>
-            {contractsReady ? "✅" : "⏳"}
-          </span>
+          <span className={contractsReady ? "text-success" : "text-warning"}>{contractsReady ? "✅" : "⏳"}</span>
           <span className="opacity-60">
-            {contractsReady
-              ? "Connected to PayFlowCore and OracleAggregator"
-              : "Connecting to contracts..."}
+            {contractsReady ? "Connected to PayFlowCore and OracleAggregator" : "Connecting to contracts..."}
           </span>
         </div>
       </div>
@@ -346,9 +333,3 @@ export const InvariantStatus = ({ settlementId }: InvariantStatusProps) => {
 };
 
 export default InvariantStatus;
-
-
-
-
-
-

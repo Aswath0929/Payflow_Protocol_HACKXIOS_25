@@ -40,9 +40,3 @@ export const SwitchTheme = ({ className }: { className?: string }) => {
     </div>
   );
 };
-
-
-
-
-
-

@@ -100,9 +100,3 @@ export const ContractTabs = ({ address, contractData }: PageProps) => {
     </>
   );
 };
-
-
-
-
-
-

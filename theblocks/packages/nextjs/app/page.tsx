@@ -4,6 +4,14 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { RainbowKitCustomConnectButton } from "~~/components/scaffold-eth";
+import { ScrollProgress, SectionNav } from "~~/components/ui/AdvancedAnimations";
+import {
+  AnimatedCounter,
+  GlassmorphicCard,
+  MorphingBlob,
+  PulseRing,
+  TypewriterText,
+} from "~~/components/ui/ModernEffects";
 import {
   MissionImpactCard,
   NARRATIVE,
@@ -15,6 +23,7 @@ import {
   StoryBlock,
   TimelineItem,
 } from "~~/components/ui/Narrative";
+import { MagneticButton, ParticleField } from "~~/components/ui/ParticleField";
 import { ScrollReveal } from "~~/components/ui/ScrollReveal";
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -90,6 +99,19 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-[#0a0a0f] text-white overflow-hidden">
+      {/* Scroll Progress Bar */}
+      <ScrollProgress />
+
+      {/* Section Navigation */}
+      <SectionNav
+        sections={[
+          { id: "hero", label: "Home" },
+          { id: "problem", label: "The Problem" },
+          { id: "solution", label: "Solution" },
+          { id: "features", label: "Features" },
+        ]}
+      />
+
       {/* Animated Background Gradient */}
       <div
         className="fixed inset-0 pointer-events-none transition-opacity duration-1000"
@@ -211,7 +233,7 @@ export default function Home() {
       </nav>
 
       {/* Hero Section */}
-      <section ref={heroRef} className="relative min-h-screen flex items-center justify-center pt-20">
+      <section id="hero" ref={heroRef} className="relative min-h-screen flex items-center justify-center pt-20">
         <div className="max-w-7xl mx-auto px-6 py-20">
           <div className="grid lg:grid-cols-2 gap-16 items-center">
             {/* Left: Text Content */}
@@ -223,14 +245,17 @@ export default function Home() {
                 <NarrativeBadge text="Live on Sepolia • PayPal & Visa Track" />
               </div>
 
-              {/* Main Headline - Emotional Hook */}
+              {/* Main Headline - Emotional Hook with Typewriter Effect */}
               <h1
                 className={`text-5xl md:text-7xl font-bold leading-[1.1] tracking-tight transition-all duration-700 delay-400 ${isLoaded ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`}
               >
                 <span className="text-zinc-400 text-2xl md:text-3xl font-normal block mb-4">What if money could</span>
-                <span className="bg-gradient-to-r from-violet-400 via-cyan-400 to-green-400 bg-clip-text text-transparent bg-[length:200%_auto] animate-[gradient-shift_3s_ease_infinite]">
-                  carry its own rules?
-                </span>
+                <TypewriterText
+                  text="carry its own rules?"
+                  className="bg-gradient-to-r from-violet-400 via-cyan-400 to-green-400 bg-clip-text text-transparent"
+                  speed={80}
+                  showCursor={false}
+                />
               </h1>
 
               {/* Subheadline - The Tension */}
@@ -280,35 +305,43 @@ export default function Home() {
                 </a>
               </div>
 
-              {/* Stats with Context */}
+              {/* Stats with Context - Animated Counters */}
               <div
                 className={`flex gap-8 pt-8 border-t border-white/5 transition-all duration-700 delay-700 ${isLoaded ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`}
               >
-                {[
-                  { value: "12s", label: "Settlement", subtext: "Not 5 days" },
-                  { value: "0.1%", label: "Total Fees", subtext: "Not 3-7%" },
-                  { value: "100%", label: "Compliant", subtext: "Always" },
-                ].map((stat, i) => (
-                  <div key={i} className="space-y-1">
-                    <div className="text-2xl font-bold bg-gradient-to-r from-violet-400 to-cyan-400 bg-clip-text text-transparent">
-                      {stat.value}
-                    </div>
-                    <div className="text-sm text-zinc-400">{stat.label}</div>
-                    <div className="text-xs text-zinc-600">{stat.subtext}</div>
+                <div className="space-y-1">
+                  <div className="text-2xl font-bold bg-gradient-to-r from-violet-400 to-cyan-400 bg-clip-text text-transparent">
+                    <AnimatedCounter value={12} suffix="s" duration={2000} />
                   </div>
-                ))}
+                  <div className="text-sm text-zinc-400">Settlement</div>
+                  <div className="text-xs text-zinc-600">Not 5 days</div>
+                </div>
+                <div className="space-y-1">
+                  <div className="text-2xl font-bold bg-gradient-to-r from-violet-400 to-cyan-400 bg-clip-text text-transparent">
+                    <AnimatedCounter value={0.1} decimals={1} suffix="%" duration={2000} />
+                  </div>
+                  <div className="text-sm text-zinc-400">Total Fees</div>
+                  <div className="text-xs text-zinc-600">Not 3-7%</div>
+                </div>
+                <div className="space-y-1">
+                  <div className="text-2xl font-bold bg-gradient-to-r from-violet-400 to-cyan-400 bg-clip-text text-transparent">
+                    <AnimatedCounter value={100} suffix="%" duration={2000} />
+                  </div>
+                  <div className="text-sm text-zinc-400">Compliant</div>
+                  <div className="text-xs text-zinc-600">Always</div>
+                </div>
               </div>
             </div>
 
-            {/* Right: Live Demo Card */}
+            {/* Right: Live Demo Card - Glassmorphic */}
             <div
               className={`relative transition-all duration-1000 delay-500 ${isLoaded ? "opacity-100 translate-x-0 rotate-0" : "opacity-0 translate-x-8 rotate-3"}`}
             >
-              {/* Glow Effect */}
-              <div className="absolute -inset-4 bg-gradient-to-r from-violet-600/20 to-cyan-600/20 rounded-3xl blur-2xl" />
+              {/* Morphing Blob Background */}
+              <MorphingBlob className="absolute -inset-20 opacity-30" color1="#8b5cf6" color2="#06b6d4" />
 
-              {/* Card */}
-              <div className="relative bg-[#12121a] border border-white/10 rounded-2xl overflow-hidden">
+              {/* Glassmorphic Card */}
+              <GlassmorphicCard className="relative" glowColor="rgba(139, 92, 246, 0.3)">
                 {/* Card Header */}
                 <div className="px-6 py-4 border-b border-white/5 flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -320,10 +353,7 @@ export default function Home() {
                     <span className="text-sm text-zinc-500">Live Demo — Watch Money Move</span>
                   </div>
                   <div className="flex items-center gap-2 text-xs text-zinc-500">
-                    <span className="relative flex h-2 w-2">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-                    </span>
+                    <PulseRing color="green" size={8} />
                     Sepolia Testnet
                   </div>
                 </div>
@@ -415,7 +445,7 @@ export default function Home() {
                     ))}
                   </div>
                 </div>
-              </div>
+              </GlassmorphicCard>
             </div>
           </div>
         </div>
@@ -619,18 +649,21 @@ export default function Home() {
       {/* ═══════════════════════════════════════════════════════════════════ */}
       {/* CTA - The Invitation */}
       {/* ═══════════════════════════════════════════════════════════════════ */}
-      <section className="relative py-32">
-        <div className="max-w-4xl mx-auto px-6 text-center">
+      <section className="relative py-32 overflow-hidden">
+        {/* Interactive Particle Field */}
+        <ParticleField particleCount={80} connectionDistance={120} speed={0.3} interactive={true} />
+
+        <div className="max-w-4xl mx-auto px-6 text-center relative z-10">
           {/* Glow */}
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <div className="w-[600px] h-[600px] bg-gradient-to-r from-violet-600/20 to-cyan-600/20 rounded-full blur-[100px]" />
+            <div className="w-[600px] h-[600px] bg-gradient-to-r from-violet-600/20 to-cyan-600/20 rounded-full blur-[100px] animate-pulse" />
           </div>
 
           <ScrollReveal className="relative space-y-8">
             <h2 className="text-4xl md:text-6xl font-bold">
               The future of money
               <br />
-              <span className="bg-gradient-to-r from-violet-400 via-cyan-400 to-green-400 bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-violet-400 via-cyan-400 to-green-400 bg-clip-text text-transparent animate-[text-shimmer_3s_ease-in-out_infinite]">
                 is programmable.
               </span>
             </h2>
@@ -641,20 +674,31 @@ export default function Home() {
             </p>
 
             <div className="flex flex-wrap justify-center gap-4 pt-4">
-              <button
+              <MagneticButton
                 onClick={() => router.push("/dashboard")}
                 className="group relative px-10 py-5 rounded-xl font-medium text-lg overflow-hidden"
               >
                 <span className="absolute inset-0 bg-gradient-to-r from-violet-600 to-cyan-600" />
                 <span className="absolute inset-0 bg-gradient-to-r from-violet-600 to-cyan-600 blur-xl opacity-50 group-hover:opacity-80 transition-opacity" />
-                <span className="relative text-white">Launch PayFlow →</span>
-              </button>
+                <span className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-all duration-500 bg-gradient-to-r from-cyan-600 to-violet-600" />
+                <span className="relative text-white flex items-center gap-2">
+                  Launch PayFlow
+                  <svg
+                    className="w-5 h-5 transition-transform group-hover:translate-x-1"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                  </svg>
+                </span>
+              </MagneticButton>
 
               <a
                 href="https://sepolia.etherscan.io/address/0x4c9489812a9D971b431B9d99049a42B437347dBC"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="px-10 py-5 rounded-xl font-medium text-lg border border-white/10 hover:border-white/20 bg-white/5 hover:bg-white/10 transition-all duration-300"
+                className="px-10 py-5 rounded-xl font-medium text-lg border border-white/10 hover:border-white/30 bg-white/5 hover:bg-white/10 transition-all duration-300 backdrop-blur-sm"
               >
                 View Smart Contracts
               </a>
@@ -705,9 +749,3 @@ export default function Home() {
     </div>
   );
 }
-
-
-
-
-
-

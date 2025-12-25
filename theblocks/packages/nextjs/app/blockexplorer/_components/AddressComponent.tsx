@@ -46,9 +46,3 @@ export const AddressComponent = ({
     </div>
   );
 };
-
-
-
-
-
-

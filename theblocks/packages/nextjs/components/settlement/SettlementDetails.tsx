@@ -394,9 +394,3 @@ export const SettlementDetails = ({ settlementId, onClose }: SettlementDetailsPr
 };
 
 export default SettlementDetails;
-
-
-
-
-
-

@@ -47,9 +47,3 @@ export const SearchBar = () => {
     </form>
   );
 };
-
-
-
-
-
-

@@ -57,9 +57,3 @@ export const RevealBurnerPKModal = () => {
     </>
   );
 };
-
-
-
-
-
-

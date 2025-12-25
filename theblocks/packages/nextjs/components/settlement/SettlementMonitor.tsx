@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useMemo, useState } from "react";
 import { formatEther } from "viem";
 import { useAccount, useReadContract } from "wagmi";
 import { useDeployedContractInfo, useScaffoldReadContract } from "~~/hooks/scaffold-eth";
@@ -21,18 +21,18 @@ import { notification } from "~~/utils/scaffold-eth";
 // Payment status enum from PayFlowCore
 const STATUS_NAMES = ["PENDING", "APPROVED", "EXECUTED", "CANCELLED", "FAILED"];
 const STATUS_COLORS: Record<number, string> = {
-  0: "badge-warning",   // PENDING
-  1: "badge-info",      // APPROVED
-  2: "badge-success",   // EXECUTED
-  3: "badge-ghost",     // CANCELLED
-  4: "badge-error",     // FAILED
+  0: "badge-warning", // PENDING
+  1: "badge-info", // APPROVED
+  2: "badge-success", // EXECUTED
+  3: "badge-ghost", // CANCELLED
+  4: "badge-error", // FAILED
 };
 
 const STATUS_ICONS: Record<number, string> = {
-  0: "⏳",  // PENDING
-  1: "✓",   // APPROVED
-  2: "✅",  // EXECUTED
-  3: "❌",  // CANCELLED
+  0: "⏳", // PENDING
+  1: "✓", // APPROVED
+  2: "✅", // EXECUTED
+  3: "❌", // CANCELLED
   4: "⚠️", // FAILED
 };
 
@@ -95,7 +95,7 @@ export const SettlementMonitor = () => {
   }, [userPayments]);
 
   // Read first 5 payment details
-  const paymentQueries = allPaymentIds.slice(0, 5).map((paymentId) => ({
+  const paymentQueries = allPaymentIds.slice(0, 5).map(paymentId => ({
     address: payFlowCoreInfo?.address,
     abi: payFlowCoreInfo?.abi,
     functionName: "getPayment" as const,
@@ -123,8 +123,7 @@ export const SettlementMonitor = () => {
     query: { enabled: !!paymentQueries[4]?.address && allPaymentIds.length > 4 },
   });
 
-  const payments = [payment1, payment2, payment3, payment4, payment5]
-    .filter(Boolean) as PaymentView[];
+  const payments = [payment1, payment2, payment3, payment4, payment5].filter(Boolean) as PaymentView[];
 
   // Calculate stats from real data
   const pendingCount = payments.filter(p => p.status === 0 || p.status === 1).length;
@@ -244,18 +243,10 @@ export const SettlementMonitor = () => {
       </div>
 
       {!isConnected && (
-        <div className="mt-4 text-center text-warning">
-          Connect your wallet to view and track your payments
-        </div>
+        <div className="mt-4 text-center text-warning">Connect your wallet to view and track your payments</div>
       )}
     </div>
   );
 };
 
 export default SettlementMonitor;
-
-
-
-
-
-
