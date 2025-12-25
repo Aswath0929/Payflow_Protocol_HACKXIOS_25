@@ -8,7 +8,7 @@ import { notification } from "~~/utils/scaffold-eth";
 
 /**
  * @title SettlementMonitor
- * @author TheBlocks Team - TriHacker Tournament 2025
+ * @author TheBlocks Team - Hackxios 2K25
  * @notice Real-time monitoring dashboard for payment status
  *
  * Uses real PayFlowCore contract functions:
@@ -253,3 +253,9 @@ export const SettlementMonitor = () => {
 };
 
 export default SettlementMonitor;
+
+
+
+
+
+

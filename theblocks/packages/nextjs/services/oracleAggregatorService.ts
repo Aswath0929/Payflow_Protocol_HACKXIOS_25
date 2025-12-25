@@ -2,7 +2,7 @@
 
 /**
  * @title Oracle Aggregator Service
- * @author TheBlocks Team - TriHacker Tournament 2025
+ * @author TheBlocks Team - Hackxios 2K25
  * @notice Real-time price aggregation from Chainlink and Pyth oracles
  * @dev Fetches live prices from multiple oracle sources with fallback
  */
@@ -445,3 +445,4 @@ export function getSourceBadge(sources: number): { text: string; color: string }
   if (sources === 1) return { text: "Single Oracle", color: "bg-yellow-500/20 text-yellow-400" };
   return { text: "Fallback", color: "bg-red-500/20 text-red-400" };
 }
+

@@ -1,6 +1,6 @@
 /**
  * 🏆 THE BLOCKS - COMPREHENSIVE PRICE FEED CONFIGURATION
- * TriHacker Tournament 2025 - IIT Bombay
+ * Hackxios 2K25 - IIT Bombay
  * 
  * Real price feeds from Chainlink and Pyth on Sepolia
  */
@@ -412,3 +412,9 @@ export interface PriceData {
   confidence?: number;
   status: "live" | "stale" | "error";
 }
+
+
+
+
+
+

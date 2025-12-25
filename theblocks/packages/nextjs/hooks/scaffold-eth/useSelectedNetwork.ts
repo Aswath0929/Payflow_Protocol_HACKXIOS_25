@@ -17,3 +17,9 @@ export function useSelectedNetwork(chainId?: AllowedChainIds): ChainWithAttribut
 
   return globalTargetNetwork;
 }
+
+
+
+
+
+

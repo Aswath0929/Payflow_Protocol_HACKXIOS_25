@@ -6,7 +6,7 @@ import { useScaffoldEventHistory, useScaffoldWatchContractEvent } from "~~/hooks
 
 /**
  * @title useContractEvents Hook
- * @author TheBlocks Team - TriHacker Tournament 2025
+ * @author TheBlocks Team - Hackxios 2K25
  * @notice Real-time contract event monitoring hook
  *
  * FEATURES:
@@ -290,3 +290,9 @@ export const useContractEvents = () => {
 };
 
 export default useContractEvents;
+
+
+
+
+
+

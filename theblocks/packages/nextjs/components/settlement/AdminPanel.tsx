@@ -6,7 +6,7 @@ import { notification } from "~~/utils/scaffold-eth";
 
 /**
  * @title AdminPanel
- * @author TheBlocks Team - TriHacker Tournament 2025
+ * @author TheBlocks Team - Hackxios 2K25
  * @notice Admin controls for protocol management
  *
  * Uses real PayFlowCore contract functions:
@@ -250,3 +250,9 @@ export const AdminPanel = () => {
 };
 
 export default AdminPanel;
+
+
+
+
+
+

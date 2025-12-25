@@ -6,7 +6,7 @@ import { useDeployedContractInfo } from "~~/hooks/scaffold-eth";
 
 /**
  * @title InvariantStatus
- * @author TheBlocks Team - TriHacker Tournament 2025
+ * @author TheBlocks Team - Hackxios 2K25
  * @notice Display and verify protocol invariants using real contract data
  *
  * INVARIANTS VERIFIED:
@@ -346,3 +346,9 @@ export const InvariantStatus = ({ settlementId }: InvariantStatusProps) => {
 };
 
 export default InvariantStatus;
+
+
+
+
+
+

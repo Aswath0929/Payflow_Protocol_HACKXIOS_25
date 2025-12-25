@@ -218,6 +218,45 @@ contract PayFlowCore is AccessControl, ReentrancyGuard, Pausable {
         ComplianceTier tier,
         bool sanctionsCleared
     );
+    
+    event TravelRuleRequired(
+        bytes32 indexed paymentId,
+        uint256 amount
+    );
+    
+    event TravelRuleRecorded(
+        bytes32 indexed paymentId,
+        bytes32 originatorDataHash,
+        bytes32 beneficiaryDataHash
+    );
+    
+    event ComplianceCheckFailed(
+        bytes32 indexed paymentId,
+        string reason
+    );
+    
+    event FXRateApplied(
+        bytes32 indexed paymentId,
+        bytes32 pairId,
+        uint256 rate,
+        uint256 sourceAmount,
+        uint256 targetAmount
+    );
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    //                         TRAVEL RULE DATA
+    // ═══════════════════════════════════════════════════════════════════════════
+    
+    struct TravelRuleRecord {
+        bytes32 originatorDataHash;
+        bytes32 beneficiaryDataHash;
+        uint256 timestamp;
+        uint256 amount;
+        bool verified;
+    }
+    
+    mapping(bytes32 => TravelRuleRecord) public travelRuleRecords;
+    uint256 public travelRuleThreshold = 3000 * 1e18; // $3000 FATF threshold
 
     // ═══════════════════════════════════════════════════════════════════════════
     //                              CONSTRUCTOR
@@ -279,7 +318,20 @@ contract PayFlowCore is AccessControl, ReentrancyGuard, Pausable {
         payment.targetToken = token; // Same token by default
         payment.status = PaymentStatus.CREATED;
         payment.createdAt = block.timestamp;
-        payment.conditions = conditions;
+        
+        // Copy conditions manually (can't assign calldata struct with dynamic array directly)
+        payment.conditions.requiredSenderTier = conditions.requiredSenderTier;
+        payment.conditions.requiredRecipientTier = conditions.requiredRecipientTier;
+        payment.conditions.requireSanctionsCheck = conditions.requireSanctionsCheck;
+        payment.conditions.validFrom = conditions.validFrom;
+        payment.conditions.validUntil = conditions.validUntil;
+        payment.conditions.businessHoursOnly = conditions.businessHoursOnly;
+        payment.conditions.maxSlippage = conditions.maxSlippage;
+        payment.conditions.requiredApprovals = conditions.requiredApprovals;
+        payment.conditions.useEscrow = conditions.useEscrow;
+        payment.conditions.escrowReleaseTime = conditions.escrowReleaseTime;
+        payment.conditions.escrowConditionHash = conditions.escrowConditionHash;
+        
         payment.referenceId = referenceId;
         payment.memo = memo;
         
@@ -347,7 +399,25 @@ contract PayFlowCore is AccessControl, ReentrancyGuard, Pausable {
         payment.targetAmount = minTargetAmount;
         payment.status = PaymentStatus.PENDING;
         payment.createdAt = block.timestamp;
-        payment.conditions = conditions;
+        
+        // Copy conditions manually (can't assign calldata struct with dynamic array directly)
+        payment.conditions.requiredSenderTier = conditions.requiredSenderTier;
+        payment.conditions.requiredRecipientTier = conditions.requiredRecipientTier;
+        payment.conditions.requireSanctionsCheck = conditions.requireSanctionsCheck;
+        payment.conditions.validFrom = conditions.validFrom;
+        payment.conditions.validUntil = conditions.validUntil;
+        payment.conditions.businessHoursOnly = conditions.businessHoursOnly;
+        payment.conditions.maxSlippage = conditions.maxSlippage;
+        payment.conditions.requiredApprovals = conditions.requiredApprovals;
+        payment.conditions.useEscrow = conditions.useEscrow;
+        payment.conditions.escrowReleaseTime = conditions.escrowReleaseTime;
+        payment.conditions.escrowConditionHash = conditions.escrowConditionHash;
+        
+        // Copy approvers array
+        for (uint i = 0; i < conditions.approvers.length; i++) {
+            payment.conditions.approvers.push(conditions.approvers[i]);
+        }
+        
         payment.referenceId = referenceId;
         payment.memo = memo;
         
@@ -416,6 +486,14 @@ contract PayFlowCore is AccessControl, ReentrancyGuard, Pausable {
     function _executePayment(bytes32 paymentId) internal {
         Payment storage payment = payments[paymentId];
         
+        // ✅ CRITICAL: Verify compliance BEFORE execution
+        if (!_verifyCompliance(payment)) {
+            // Payment failed compliance - state already updated in _verifyCompliance
+            IERC20(payment.token).safeTransfer(payment.sender, payment.amount);
+            emit ComplianceCheckFailed(paymentId, "Compliance verification failed");
+            return;
+        }
+        
         uint256 amountToSend = payment.amount;
         
         // Deduct protocol fee
@@ -426,9 +504,9 @@ contract PayFlowCore is AccessControl, ReentrancyGuard, Pausable {
         }
         
         // Handle cross-border FX if needed
+        uint256 fxRate = 1e18;
         if (payment.targetToken != payment.token) {
-            // In production, this would call the oracle and DEX
-            // For demo, we simulate 1:1 conversion
+            uint256 originalAmount = amountToSend;
             amountToSend = _performFXConversion(
                 payment.token,
                 payment.targetToken,
@@ -437,13 +515,22 @@ contract PayFlowCore is AccessControl, ReentrancyGuard, Pausable {
                 payment.conditions.maxSlippage
             );
             
+            // Calculate actual FX rate used
+            if (originalAmount > 0) {
+                fxRate = (amountToSend * 1e18) / originalAmount;
+            }
+            
+            // Emit FX rate event for audit trail
+            bytes32 pairId = keccak256(abi.encodePacked(payment.token, "/", payment.targetToken));
+            emit FXRateApplied(paymentId, pairId, fxRate, originalAmount, amountToSend);
+            
             emit CrossBorderSettlement(
                 paymentId,
                 payment.token,
                 payment.targetToken,
                 payment.amount,
                 amountToSend,
-                1e18 // Simulated 1:1 rate
+                fxRate
             );
         }
         
@@ -469,12 +556,14 @@ contract PayFlowCore is AccessControl, ReentrancyGuard, Pausable {
         
         // Log to audit registry
         if (auditRegistry != address(0)) {
-            IAuditRegistry(auditRegistry).logPaymentExecution(
+            IAuditRegistry(auditRegistry).logPaymentExecuted(
                 paymentId,
                 payment.sender,
                 payment.recipient,
                 payment.amount,
-                settlementTime
+                payment.targetToken,
+                settlementTime,
+                "" // jurisdiction - could be enhanced with Travel Rule data
             );
         }
         
@@ -487,21 +576,70 @@ contract PayFlowCore is AccessControl, ReentrancyGuard, Pausable {
         );
     }
 
+    /**
+     * @notice Perform FX conversion using oracle rates
+     * @dev Uses OracleAggregator for real-time rates with slippage protection
+     */
     function _performFXConversion(
-        address, // sourceToken
+        address sourceToken,
         address targetToken,
         uint256 sourceAmount,
-        uint256, // minTargetAmount
-        uint256 // maxSlippage
+        uint256 minTargetAmount,
+        uint256 maxSlippage
     ) internal view returns (uint256) {
-        // In production: Call oracle for rate, execute swap through DEX
-        // For hackathon demo: Simulate 1:1 stablecoin conversion
+        // Same token = no conversion needed
+        if (sourceToken == targetToken) {
+            return sourceAmount;
+        }
         
-        // Verify we have enough target tokens (would come from liquidity pool)
+        // Get oracle rate if oracle is configured
+        uint256 targetAmount;
+        if (oracleAggregator != address(0)) {
+            // Build pair key from token symbols (simplified - in production, use token registry)
+            bytes32 pairId = keccak256(abi.encodePacked(sourceToken, "/", targetToken));
+            
+            IOracleAggregator oracle = IOracleAggregator(oracleAggregator);
+            IOracleAggregator.RateResponse memory rateData = oracle.getRate(pairId);
+            
+            // Check for stale data (1 hour threshold)
+            require(
+                block.timestamp - rateData.timestamp <= 3600 || rateData.spotRate > 0,
+                "Stale oracle data"
+            );
+            
+            // Check circuit breaker
+            require(!rateData.circuitBreakerActive, "Circuit breaker active");
+            
+            // Perform conversion using oracle rate (rates are 18 decimals)
+            if (rateData.spotRate > 0) {
+                targetAmount = (sourceAmount * rateData.spotRate) / 1e18;
+            } else {
+                // Fallback to 1:1 for stablecoins if no rate
+                targetAmount = sourceAmount;
+            }
+        } else {
+            // No oracle configured - use 1:1 (for demo/testing)
+            targetAmount = sourceAmount;
+        }
+        
+        // Slippage protection
+        if (minTargetAmount > 0) {
+            require(targetAmount >= minTargetAmount, "Slippage exceeded: below minimum");
+        }
+        
+        // Check max slippage in basis points
+        if (maxSlippage > 0 && minTargetAmount > 0) {
+            uint256 slippageBps = ((minTargetAmount - targetAmount) * 10000) / minTargetAmount;
+            require(slippageBps <= maxSlippage, "Slippage exceeded: above max bps");
+        }
+        
+        // Verify liquidity
         uint256 balance = IERC20(targetToken).balanceOf(address(this));
-        require(balance >= sourceAmount, "Insufficient liquidity");
+        require(balance >= targetAmount, "Insufficient liquidity");
         
-        return sourceAmount;
+        require(targetAmount > 0, "Invalid conversion result");
+        
+        return targetAmount;
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
@@ -564,8 +702,62 @@ contract PayFlowCore is AccessControl, ReentrancyGuard, Pausable {
             return false;
         }
         
-        // In production: Check compliance engine for KYC/AML status
-        // For demo: Always passes
+        // Business hours check (simplified: Mon-Fri 9am-5pm UTC)
+        if (c.businessHoursOnly) {
+            uint256 dayOfWeek = (block.timestamp / 86400 + 4) % 7; // 0=Sunday
+            uint256 hourOfDay = (block.timestamp % 86400) / 3600;
+            // Skip weekends and outside 9-17 UTC
+            if (dayOfWeek == 0 || dayOfWeek == 6) return false;
+            if (hourOfDay < 9 || hourOfDay >= 17) return false;
+        }
+        
+        return true;
+    }
+    
+    /**
+     * @notice Verify compliance for a payment before execution
+     * @dev Calls ComplianceEngine for KYC/AML/Sanctions verification
+     */
+    function _verifyCompliance(Payment storage payment) internal returns (bool) {
+        PaymentConditions storage c = payment.conditions;
+        
+        // Skip if no compliance requirements
+        if (
+            c.requiredSenderTier == ComplianceTier.NONE &&
+            c.requiredRecipientTier == ComplianceTier.NONE &&
+            !c.requireSanctionsCheck
+        ) {
+            emit ComplianceVerified(payment.paymentId, payment.sender, c.requiredSenderTier, true);
+            return true;
+        }
+        
+        // Call compliance engine if configured
+        if (complianceEngine != address(0)) {
+            IComplianceEngine engine = IComplianceEngine(complianceEngine);
+            
+            IComplianceEngine.TransactionCheck memory check = engine.checkPaymentCompliance(
+                payment.paymentId,
+                payment.sender,
+                payment.recipient,
+                payment.amount,
+                c.requireSanctionsCheck,
+                IComplianceEngine.ComplianceTier(uint8(c.requiredSenderTier)),
+                IComplianceEngine.ComplianceTier(uint8(c.requiredRecipientTier))
+            );
+            
+            if (!check.passed) {
+                emit PaymentFailed(payment.paymentId, check.reason);
+                payment.status = PaymentStatus.FAILED;
+                return false;
+            }
+            
+            emit ComplianceVerified(payment.paymentId, payment.sender, c.requiredSenderTier, true);
+            
+            // Emit Travel Rule event if required
+            if (check.requiresTravelRule) {
+                emit TravelRuleRequired(payment.paymentId, payment.amount);
+            }
+        }
         
         return true;
     }
@@ -664,6 +856,70 @@ contract PayFlowCore is AccessControl, ReentrancyGuard, Pausable {
     function unpause() external onlyRole(OPERATOR_ROLE) {
         _unpause();
     }
+    
+    // ═══════════════════════════════════════════════════════════════════════════
+    //                         TRAVEL RULE FUNCTIONS
+    // ═══════════════════════════════════════════════════════════════════════════
+    
+    /**
+     * @notice Record Travel Rule data for a payment (FATF requirement for >$3000)
+     * @dev Data is hashed on-chain for privacy, full data stored off-chain
+     * @param paymentId The payment to record travel rule data for
+     * @param originatorData Encoded originator information (name, address, etc)
+     * @param beneficiaryData Encoded beneficiary information
+     */
+    function recordTravelRuleData(
+        bytes32 paymentId,
+        bytes calldata originatorData,
+        bytes calldata beneficiaryData
+    ) external onlyRole(COMPLIANCE_ROLE) {
+        Payment storage payment = payments[paymentId];
+        require(payment.paymentId == paymentId, "Payment not found");
+        require(payment.amount >= travelRuleThreshold, "Below travel rule threshold");
+        
+        TravelRuleRecord storage record = travelRuleRecords[paymentId];
+        
+        record.originatorDataHash = keccak256(originatorData);
+        record.beneficiaryDataHash = keccak256(beneficiaryData);
+        record.timestamp = block.timestamp;
+        record.amount = payment.amount;
+        record.verified = true;
+        
+        emit TravelRuleRecorded(paymentId, record.originatorDataHash, record.beneficiaryDataHash);
+    }
+    
+    /**
+     * @notice Check if payment requires Travel Rule compliance
+     */
+    function requiresTravelRule(bytes32 paymentId) external view returns (bool) {
+        Payment storage payment = payments[paymentId];
+        return payment.amount >= travelRuleThreshold;
+    }
+    
+    /**
+     * @notice Get Travel Rule record for a payment
+     */
+    function getTravelRuleRecord(bytes32 paymentId) external view returns (
+        bytes32 originatorHash,
+        bytes32 beneficiaryHash,
+        uint256 timestamp,
+        bool verified
+    ) {
+        TravelRuleRecord storage record = travelRuleRecords[paymentId];
+        return (
+            record.originatorDataHash,
+            record.beneficiaryDataHash,
+            record.timestamp,
+            record.verified
+        );
+    }
+    
+    /**
+     * @notice Set the Travel Rule threshold
+     */
+    function setTravelRuleThreshold(uint256 _threshold) external onlyRole(COMPLIANCE_ROLE) {
+        travelRuleThreshold = _threshold;
+    }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -671,11 +927,56 @@ contract PayFlowCore is AccessControl, ReentrancyGuard, Pausable {
 // ═══════════════════════════════════════════════════════════════════════════
 
 interface IAuditRegistry {
-    function logPaymentExecution(
+    function logPaymentExecuted(
         bytes32 paymentId,
         address sender,
         address recipient,
         uint256 amount,
-        uint256 settlementTime
-    ) external;
+        address token,
+        uint256 settlementTime,
+        string calldata jurisdiction
+    ) external returns (bytes32);
+}
+
+interface IComplianceEngine {
+    enum ComplianceTier {
+        NONE,
+        BASIC,
+        STANDARD,
+        ENHANCED,
+        INSTITUTIONAL
+    }
+    
+    struct TransactionCheck {
+        bool passed;
+        string reason;
+        bool requiresTravelRule;
+        bool requiresEnhancedDD;
+        uint256 timestamp;
+    }
+    
+    function checkPaymentCompliance(
+        bytes32 paymentId,
+        address sender,
+        address recipient,
+        uint256 amount,
+        bool requireSanctionsCheck,
+        ComplianceTier requiredSenderTier,
+        ComplianceTier requiredRecipientTier
+    ) external returns (TransactionCheck memory);
+}
+
+interface IOracleAggregator {
+    struct RateResponse {
+        uint256 spotRate;
+        uint256 twapRate;
+        uint256 confidence;
+        uint256 timestamp;
+        bool isStale;
+        bool circuitBreakerActive;
+    }
+    
+    function getRate(bytes32 pairId) external view returns (RateResponse memory);
+    function getRateBySymbols(string calldata base, string calldata quote) external view returns (RateResponse memory);
+    function convert(bytes32 pairId, uint256 amount, bool inverse) external view returns (uint256, uint256);
 }

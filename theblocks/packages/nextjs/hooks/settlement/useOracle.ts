@@ -7,7 +7,7 @@ import { useDeployedContractInfo } from "~~/hooks/scaffold-eth";
 
 /**
  * @title useOracle Hook
- * @author TheBlocks Team - TriHacker Tournament 2025
+ * @author TheBlocks Team - Hackxios 2K25
  * @notice Oracle price management and health monitoring using OracleAggregator contract
  *
  * Uses real OracleAggregator contract functions:
@@ -277,3 +277,9 @@ export const useOracle = () => {
 };
 
 export default useOracle;
+
+
+
+
+
+

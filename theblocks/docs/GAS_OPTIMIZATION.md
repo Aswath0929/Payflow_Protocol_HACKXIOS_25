@@ -1,6 +1,6 @@
 # Gas Optimization Analysis
 
-> Comprehensive gas analysis and optimization strategies for the Settlement Protocol
+> Comprehensive gas analysis and optimization strategies for PayFlow Protocol - Hackxios 2K25
 
 ## Table of Contents
 1. [Executive Summary](#executive-summary)
@@ -370,4 +370,4 @@ npx hardhat size-contracts
 
 ---
 
-*Last Updated: TriHacker Tournament 2025*
+*Last Updated: Hackxios 2K25*

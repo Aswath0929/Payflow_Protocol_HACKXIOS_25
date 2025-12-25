@@ -95,3 +95,9 @@ export const TransactionsTable = ({ blocks, transactionReceipts }: TransactionsT
     </div>
   );
 };
+
+
+
+
+
+

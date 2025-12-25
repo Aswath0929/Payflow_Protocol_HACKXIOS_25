@@ -38,3 +38,9 @@ export const useScaffoldWatchContractEvent = <
     eventName,
   });
 };
+
+
+
+
+
+

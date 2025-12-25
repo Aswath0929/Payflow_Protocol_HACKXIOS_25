@@ -8,7 +8,7 @@ import { notification } from "~~/utils/scaffold-eth";
 
 /**
  * @title DisputeInterface
- * @author TheBlocks Team - TriHacker Tournament 2025
+ * @author TheBlocks Team - Hackxios 2K25
  * @notice Interface for viewing payments and dispute status
  *
  * Uses real PayFlowCore contract functions:
@@ -309,3 +309,9 @@ export const DisputeInterface = () => {
 };
 
 export default DisputeInterface;
+
+
+
+
+
+

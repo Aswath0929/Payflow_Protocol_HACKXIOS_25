@@ -20,3 +20,9 @@ export const useNetworkColor = (chainId?: AllowedChainIds) => {
 
   return getNetworkColor(chain, isDarkMode);
 };
+
+
+
+
+
+

@@ -6,7 +6,7 @@ import { useContractEvents } from "~~/hooks/settlement";
 
 /**
  * @title ProtocolStats
- * @author TheBlocks Team - TriHacker Tournament 2025
+ * @author TheBlocks Team - Hackxios 2K25
  * @notice Real-time protocol statistics dashboard
  *
  * FEATURES:
@@ -197,3 +197,9 @@ export const ProtocolStats = () => {
 };
 
 export default ProtocolStats;
+
+
+
+
+
+

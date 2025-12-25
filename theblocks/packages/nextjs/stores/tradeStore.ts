@@ -2,7 +2,7 @@
 
 /**
  * @title Trade Store
- * @author TheBlocks Team - TriHacker Tournament 2025
+ * @author TheBlocks Team - Hackxios 2K25
  * @notice Shared state management for trades across components
  * @dev Uses localStorage for persistence across sessions
  */
@@ -170,3 +170,4 @@ export function exportTrades(userAddress: string): string {
   const trades = getTrades(userAddress);
   return JSON.stringify(trades, null, 2);
 }
+

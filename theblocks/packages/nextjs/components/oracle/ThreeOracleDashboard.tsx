@@ -977,3 +977,9 @@ function OracleCardSkeleton() {
     </div>
   );
 }
+
+
+
+
+
+

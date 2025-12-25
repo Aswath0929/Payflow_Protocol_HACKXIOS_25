@@ -1,6 +1,6 @@
-# Settlement Protocol Deployment Guide
+# PayFlow Protocol Deployment Guide
 
-> Complete deployment instructions for the Adversarial-Resilient Settlement Protocol
+> Complete deployment instructions for the PayFlow Protocol - Hackxios 2K25
 
 ## Table of Contents
 1. [Prerequisites](#prerequisites)
@@ -437,4 +437,4 @@ npx hardhat compile
 
 ---
 
-*Last Updated: TriHacker Tournament 2025*
+*Last Updated: Hackxios 2K25*

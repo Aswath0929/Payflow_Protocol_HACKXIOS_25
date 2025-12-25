@@ -7,7 +7,7 @@ import { notification } from "~~/utils/scaffold-eth";
 
 /**
  * @title SettlementDetails
- * @author TheBlocks Team - TriHacker Tournament 2025
+ * @author TheBlocks Team - Hackxios 2K25
  * @notice Detailed view of a single settlement
  *
  * FEATURES:
@@ -394,3 +394,9 @@ export const SettlementDetails = ({ settlementId, onClose }: SettlementDetailsPr
 };
 
 export default SettlementDetails;
+
+
+
+
+
+

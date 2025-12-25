@@ -2,7 +2,7 @@
 
 /**
  * @title Price Service
- * @author TheBlocks Team - TriHacker Tournament 2025
+ * @author TheBlocks Team - Hackxios 2K25
  * @notice Dynamic price fetching with fallback to oracles
  * @dev Fetches prices from multiple sources with caching
  */
@@ -272,3 +272,4 @@ export function formatPriceChange(change: number): { text: string; color: string
   }
   return { text: "0.00%", color: "text-gray-400" };
 }
+

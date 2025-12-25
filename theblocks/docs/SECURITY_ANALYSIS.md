@@ -1,14 +1,32 @@
-# Security Analysis: Settlement Protocol
+# Security Analysis: PayFlow Protocol
 
-> **TheBlocks Team - TriHacker Tournament 2025**
+> **PayFlow Protocol - Hackxios 2K25**
 > 
-> Adversarial-Resilient Settlement Protocol Security Documentation
+> Institutional Stablecoin Payment Infrastructure Security Documentation
+
+---
+
+## ⚠️ Document Scope
+
+This document describes security analysis for both **implemented Phase 1** and **planned Phase 2** features.
+
+### Phase 1 (Implemented) ✅
+- PayFlowCore - Central payment routing
+- ComplianceEngine - KYC/AML verification
+- SmartEscrow - Programmable escrow with 4 release types
+- OracleAggregator - Multi-source price feeds with circuit breaker
+- AuditRegistry - Immutable audit trail
+
+### Phase 2 (Planned) ⏳
+- SettlementProtocol - Advanced FIFO settlement
+- MultiOracleAggregator - 5-oracle BFT consensus
+- FinalityController - Multi-validator attestation
 
 ---
 
 ## Executive Summary
 
-This document provides comprehensive security analysis of the TriHacker Settlement Protocol, including threat model, attack vectors, defenses, and formal verification approach.
+This document provides comprehensive security analysis of the PayFlow Protocol, including threat model, attack vectors, defenses, and formal verification approach.
 
 **Security Rating: A+ (Excellent)**
 

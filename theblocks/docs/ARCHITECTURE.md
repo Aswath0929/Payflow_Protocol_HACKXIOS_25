@@ -1,7 +1,26 @@
 # System Architecture
 
-> **TheBlocks - Adversarial-Resilient Settlement Protocol**  
-> TriHacker Tournament 2025
+> **PayFlow Protocol - Institutional Stablecoin Payment Infrastructure**  
+> Hackxios 2K25 - PayPal & Visa Track
+
+---
+
+## ⚠️ Document Scope
+
+This document describes the **Phase 2 advanced settlement architecture** that is planned for future development. 
+
+**Currently Implemented (Phase 1):**
+- ✅ **PayFlowCore.sol** (~980 lines) - Central payment routing with compliance integration
+- ✅ **ComplianceEngine.sol** (~500 lines) - 5-tier KYC/AML verification
+- ✅ **SmartEscrow.sol** (~500 lines) - 4-type programmable escrow
+- ✅ **OracleAggregator.sol** (~600 lines) - Multi-source FX rates with circuit breaker
+- ✅ **AuditRegistry.sol** (~500 lines) - Immutable regulatory audit trail
+
+**Planned for Phase 2:**
+- ⏳ SettlementProtocol - Advanced settlement with FIFO queuing
+- ⏳ MultiOracleAggregator - 5-oracle BFT consensus
+- ⏳ SettlementOracle - Specialized settlement price validation
+- ⏳ FinalityController - Multi-validator attestation
 
 ---
 

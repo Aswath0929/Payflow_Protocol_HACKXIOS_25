@@ -481,5 +481,119 @@ contract SmartEscrow is AccessControl, ReentrancyGuard {
         Escrow storage escrow = escrows[escrowId];
         require(escrow.conditionType == ReleaseCondition.ORACLE, "Not oracle escrow");
         escrow.oracleConditionMet = true;
+        
+        emit OracleConditionMet(escrowId);
     }
+    
+    // ═══════════════════════════════════════════════════════════════════════════
+    //                         MULTI-SIG ESCROW FUNCTIONS
+    // ═══════════════════════════════════════════════════════════════════════════
+    
+    /**
+     * @notice Create a multi-signature escrow requiring multiple approvals
+     */
+    function createMultiSigEscrow(
+        bytes32 paymentId,
+        address beneficiary,
+        address token,
+        uint256 amount,
+        uint256 requiredSigs,
+        address[] calldata signers,
+        uint256 disputeWindow,
+        string calldata description
+    ) external nonReentrant returns (bytes32 escrowId) {
+        require(beneficiary != address(0), "Invalid beneficiary");
+        require(amount > 0, "Amount must be positive");
+        require(requiredSigs > 0 && requiredSigs <= signers.length, "Invalid sig requirement");
+        
+        escrowId = _createEscrow(
+            paymentId,
+            msg.sender,
+            beneficiary,
+            token,
+            amount,
+            ReleaseCondition.MULTI_SIG,
+            0,
+            disputeWindow,
+            description
+        );
+        
+        Escrow storage escrow = escrows[escrowId];
+        escrow.requiredSignatures = requiredSigs;
+        
+        // Store signers in mapping
+        for (uint i = 0; i < signers.length; i++) {
+            escrowSigners[escrowId][signers[i]] = true;
+        }
+        
+        emit MultiSigEscrowCreated(escrowId, requiredSigs, signers.length);
+        
+        return escrowId;
+    }
+    
+    /**
+     * @notice Sign a multi-sig escrow for release
+     */
+    function signMultiSigRelease(bytes32 escrowId) external nonReentrant {
+        Escrow storage escrow = escrows[escrowId];
+        require(escrow.escrowId == escrowId, "Escrow not found");
+        require(escrow.status == EscrowStatus.ACTIVE, "Not active");
+        require(escrow.conditionType == ReleaseCondition.MULTI_SIG, "Not multi-sig escrow");
+        require(escrowSigners[escrowId][msg.sender], "Not an authorized signer");
+        require(!escrow.hasSigned[msg.sender], "Already signed");
+        
+        escrow.hasSigned[msg.sender] = true;
+        escrow.signatureCount++;
+        
+        emit MultiSigSigned(escrowId, msg.sender, escrow.signatureCount, escrow.requiredSignatures);
+        
+        // Auto-release if threshold met
+        if (escrow.signatureCount >= escrow.requiredSignatures) {
+            _releaseEscrow(escrowId);
+        }
+    }
+    
+    /**
+     * @notice Create an oracle-based escrow with condition ID
+     */
+    function createOracleEscrow(
+        bytes32 paymentId,
+        address beneficiary,
+        address token,
+        uint256 amount,
+        bytes32 oracleConditionId,
+        uint256 disputeWindow,
+        string calldata description
+    ) external nonReentrant returns (bytes32 escrowId) {
+        require(beneficiary != address(0), "Invalid beneficiary");
+        require(amount > 0, "Amount must be positive");
+        
+        escrowId = _createEscrow(
+            paymentId,
+            msg.sender,
+            beneficiary,
+            token,
+            amount,
+            ReleaseCondition.ORACLE,
+            0,
+            disputeWindow,
+            description
+        );
+        
+        Escrow storage escrow = escrows[escrowId];
+        escrow.oracleConditionId = oracleConditionId;
+        
+        emit OracleEscrowCreated(escrowId, oracleConditionId);
+        
+        return escrowId;
+    }
+    
+    // Multi-sig signer tracking
+    mapping(bytes32 => mapping(address => bool)) public escrowSigners;
+    
+    // Events for new escrow types
+    event MultiSigEscrowCreated(bytes32 indexed escrowId, uint256 requiredSigs, uint256 totalSigners);
+    event MultiSigSigned(bytes32 indexed escrowId, address indexed signer, uint256 currentSigs, uint256 requiredSigs);
+    event OracleEscrowCreated(bytes32 indexed escrowId, bytes32 conditionId);
+    event OracleConditionMet(bytes32 indexed escrowId);
 }

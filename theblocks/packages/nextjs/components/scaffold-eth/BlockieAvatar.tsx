@@ -15,3 +15,9 @@ export const BlockieAvatar: AvatarComponent = ({ address, ensImage, size }) => (
     alt={`${address} avatar`}
   />
 );
+
+
+
+
+
+

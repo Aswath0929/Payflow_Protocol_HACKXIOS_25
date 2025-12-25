@@ -5,7 +5,7 @@ import { useContractEvents } from "~~/hooks/settlement";
 
 /**
  * @title EventFeed
- * @author TheBlocks Team - TriHacker Tournament 2025
+ * @author TheBlocks Team - Hackxios 2K25
  * @notice Real-time event feed with filtering
  *
  * FEATURES:
@@ -164,3 +164,9 @@ export const EventFeed = ({ maxEvents = 20, showFilters = true, compact = false 
 };
 
 export default EventFeed;
+
+
+
+
+
+

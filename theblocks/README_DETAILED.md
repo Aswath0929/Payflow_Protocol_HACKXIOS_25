@@ -2,7 +2,7 @@
 
 > **A Byzantine Fault Tolerant (BFT) Multi-Oracle Aggregation System with MEV Protection**
 
-Built for India Blockchain Week 2025 - TriHacker Tournament
+Built for India Blockchain Week 2025 - Hackxios Tournament
 
 ---
 
@@ -669,10 +669,11 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 ## 👥 Team
 
-**TriHacker Tournament 2025**
+**Hackxios 2K25**
 
 Built with ❤️ at India Blockchain Week 2025
 
 ---
 
 *For detailed documentation, see the `/docs` folder.*
+

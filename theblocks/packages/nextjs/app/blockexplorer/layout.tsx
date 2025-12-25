@@ -10,3 +10,9 @@ const BlockExplorerLayout = ({ children }: { children: React.ReactNode }) => {
 };
 
 export default BlockExplorerLayout;
+
+
+
+
+
+

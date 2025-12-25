@@ -36,3 +36,9 @@ export const ContractUI = ({ contractName }: ContractUIProps) => {
 
   return <Contract contractName={contractName as string} contract={deployedContractData} chainId={targetNetwork.id} />;
 };
+
+
+
+
+
+

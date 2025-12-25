@@ -8,7 +8,7 @@ import { notification } from "~~/utils/scaffold-eth";
 
 /**
  * @title SettlementInitiator
- * @author TheBlocks Team - TriHacker Tournament 2025
+ * @author TheBlocks Team - Hackxios 2K25
  * @notice UI component to create new settlements with multi-transfer support
  *
  * FEATURES:
@@ -384,3 +384,9 @@ export const SettlementInitiator = () => {
 };
 
 export default SettlementInitiator;
+
+
+
+
+
+

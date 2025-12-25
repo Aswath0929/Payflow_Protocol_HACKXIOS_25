@@ -425,3 +425,9 @@ export function useScrollReveal(threshold = 0.1) {
 
 // Keep ScrollRevealGroup as an alias for backward compatibility
 export const ScrollRevealGroup = StaggerContainer;
+
+
+
+
+
+

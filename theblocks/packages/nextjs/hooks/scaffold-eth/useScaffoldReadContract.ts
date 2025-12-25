@@ -78,3 +78,9 @@ export const useScaffoldReadContract = <
 
   return readContractHookRes;
 };
+
+
+
+
+
+

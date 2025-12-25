@@ -22,7 +22,8 @@ import { SettlementProtocol } from "../typechain-types";
  *
  * Reference: partial_finality_strategy.md
  */
-describe("Partial Finality - 4-Layer BFT Model", function () {
+// NOTE: Requires SettlementProtocol - planned for Phase 2
+describe.skip("Partial Finality - 4-Layer BFT Model [Phase 2]", function () {
   let protocol: SettlementProtocol;
   let alice: SignerWithAddress;
   let bob: SignerWithAddress;

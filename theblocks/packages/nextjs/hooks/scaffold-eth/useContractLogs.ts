@@ -38,3 +38,9 @@ export const useContractLogs = (address: Address) => {
 
   return logs;
 };
+
+
+
+
+
+

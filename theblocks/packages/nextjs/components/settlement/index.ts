@@ -1,4 +1,4 @@
-// Settlement Components - TheBlocks Team TriHacker 2025
+// Settlement Components - TheBlocks Team Hackxios 2K25
 export { SettlementInitiator } from "./SettlementInitiator";
 export { SettlementMonitor } from "./SettlementMonitor";
 export { DisputeInterface } from "./DisputeInterface";

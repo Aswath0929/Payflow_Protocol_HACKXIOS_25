@@ -246,3 +246,9 @@ const OraclePage: NextPage = () => {
 };
 
 export default OraclePage;
+
+
+
+
+
+

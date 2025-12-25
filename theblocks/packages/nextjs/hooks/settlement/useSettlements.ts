@@ -7,7 +7,7 @@ import { useScaffoldReadContract, useScaffoldWatchContractEvent } from "~~/hooks
 
 /**
  * @title useSettlements Hook
- * @author TheBlocks Team - TriHacker Tournament 2025
+ * @author TheBlocks Team - Hackxios 2K25
  * @notice Payment/settlement state management hook
  *
  * NOTE: Uses actual PayFlowCore functions where available
@@ -230,3 +230,9 @@ export const useSettlements = (settlementId?: bigint) => {
 };
 
 export default useSettlements;
+
+
+
+
+
+

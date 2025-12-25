@@ -22,3 +22,9 @@ export function useTargetNetwork(): { targetNetwork: ChainWithAttributes } {
 
   return useMemo(() => ({ targetNetwork }), [targetNetwork]);
 }
+
+
+
+
+
+

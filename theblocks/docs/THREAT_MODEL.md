@@ -1,7 +1,13 @@
 # Threat Model & Attack Analysis
 
-> **TheBlocks - Adversarial-Resilient Settlement Protocol**  
-> TriHacker Tournament 2025
+> **PayFlow Protocol - Hackxios 2K25**  
+> Institutional Stablecoin Payment Infrastructure
+
+---
+
+## ⚠️ Document Scope
+
+This threat model covers both implemented (Phase 1) and planned (Phase 2) features.
 
 ---
 
@@ -19,7 +25,7 @@
 
 ## System Overview
 
-TheBlocks is a settlement protocol designed to be resilient against adversarial conditions including:
+PayFlow Protocol is an institutional stablecoin payment infrastructure designed to be resilient against adversarial conditions including:
 - MEV (Maximal Extractable Value) attacks
 - Oracle manipulation
 - Front-running

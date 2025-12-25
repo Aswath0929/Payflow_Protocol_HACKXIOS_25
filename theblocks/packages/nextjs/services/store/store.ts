@@ -23,3 +23,4 @@ export const useGlobalState = create<GlobalState>(set => ({
   },
   setTargetNetwork: (newTargetNetwork: ChainWithAttributes) => set(() => ({ targetNetwork: newTargetNetwork })),
 }));
+

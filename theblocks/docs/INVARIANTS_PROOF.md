@@ -1,8 +1,14 @@
 # Formal Invariant Proofs
 
-## TheBlocks Settlement Protocol - TriHacker Tournament 2025
+## PayFlow Protocol - Hackxios 2K25
 
-This document provides formal mathematical proofs for the five core invariants that guarantee the safety and correctness of the settlement protocol.
+This document provides formal mathematical proofs for the five core invariants that guarantee the safety and correctness of the payment protocol.
+
+---
+
+## ⚠️ Document Scope
+
+These proofs cover invariants for both implemented (Phase 1) and planned (Phase 2) features.
 
 ---
 
@@ -420,6 +426,6 @@ The protocol is designed to be **adversarial-resilient** against:
 
 ---
 
-*Document generated for TheBlocks Settlement Protocol*
-*TriHacker Tournament 2025*
+*Document generated for PayFlow Protocol*
+*Hackxios 2K25*
 *Last updated: December 2025*

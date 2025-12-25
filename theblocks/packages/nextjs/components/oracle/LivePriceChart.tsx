@@ -342,3 +342,9 @@ function MiniPriceCard({
     </div>
   );
 }
+
+
+
+
+
+

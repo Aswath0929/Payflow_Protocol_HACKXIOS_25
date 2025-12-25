@@ -1,13 +1,19 @@
 # Protocol Invariants
 
-> **TheBlocks - Adversarial-Resilient Settlement Protocol**  
-> TriHacker Tournament 2025
+> **PayFlow Protocol - Hackxios 2K25**  
+> Institutional Stablecoin Payment Infrastructure
+
+---
+
+## ⚠️ Document Scope
+
+This document describes invariants for both implemented (Phase 1) and planned (Phase 2) features.
 
 ---
 
 ## 📋 Overview
 
-This document formally specifies the **5 core invariants** that the Settlement Protocol enforces at runtime. These invariants are critical for maintaining protocol correctness and security under adversarial conditions.
+This document formally specifies the **5 core invariants** that the PayFlow Protocol enforces at runtime. These invariants are critical for maintaining protocol correctness and security under adversarial conditions.
 
 ---
 

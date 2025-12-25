@@ -101,28 +101,28 @@ Traditional cross-border payments require 6-7 intermediaries, each adding delay 
 This isn't incremental improvement. This is infrastructure for the next century.`,
     differentiators: [
       {
-        title: "Byzantine Fault Tolerant Oracles",
+        title: "Multi-Source Oracle Aggregation",
         description:
-          "We don't trust any single price source. Our dual-oracle consensus system ensures accurate FX rates with weighted aggregation. Flash loan attacks? Impossible.",
-        technical: "Chainlink (60% weight) and Pyth Network (40% weight) with outlier detection and deviation thresholds",
+          "We don't trust any single price source. Our OracleAggregator provides weighted averaging with circuit breakers. 20% deviation triggers emergency halt. Flash loan attacks? Impossible.",
+        technical: "Multi-oracle support with staleness checks (1 hour threshold), TWAP calculation, and automatic circuit breaker on extreme price movements",
       },
       {
         title: "On-Chain Compliance Engine",
         description:
-          "5-tier verification from basic email to full institutional KYC. Compliance status verified cryptographically, eliminating repeated checks across institutions.",
-        technical: "Zero-knowledge proofs for privacy-preserving compliance verification",
+          "5-tier verification from basic email to full institutional KYC. ComplianceEngine.checkPaymentCompliance() is called before every payment execution.",
+        technical: "Integrated compliance verification with tiered limits, sanctions checking, and Travel Rule data hashing (FATF R.16 compliant)",
       },
       {
-        title: "Programmable Escrow",
+        title: "Programmable Escrow (All 4 Types)",
         description:
-          "Money that waits for the right conditions. Time-locks, multi-sig, oracle-triggered, approval-based. Complex business logic encoded in the payment itself.",
-        technical: "Smart contract escrow with configurable release conditions",
+          "Money that waits for the right conditions. TIME_BASED auto-release, APPROVAL sign-off, ORACLE verification, and MULTI_SIG corporate approvals—all fully implemented.",
+        technical: "SmartEscrow with 4 release mechanisms: time-locks, beneficiary approval, external oracle triggers, and M-of-N multi-signature",
       },
       {
         title: "Immutable Audit Trail",
         description:
           "Every compliance check, every approval, every transfer—permanently recorded. Travel Rule compliant. Regulator-queryable. Tamper-proof.",
-        technical: "On-chain event logging with regulatory export capabilities",
+        technical: "AuditRegistry with LOGGER_ROLE access control, logPaymentExecuted events, and regulatory export capabilities",
       },
     ],
   },
@@ -408,3 +408,9 @@ export function NarrativeBadge({ text, pulse = true }: { text: string; pulse?: b
     </div>
   );
 }
+
+
+
+
+
+

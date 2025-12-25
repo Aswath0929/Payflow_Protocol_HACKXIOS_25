@@ -5,7 +5,7 @@ import { useOracle } from "~~/hooks/settlement";
 
 /**
  * @title OraclePriceDisplay
- * @author TheBlocks Team - TriHacker Tournament 2025
+ * @author TheBlocks Team - Hackxios 2K25
  * @notice Real-time oracle price display with health indicators
  *
  * FEATURES:
@@ -174,3 +174,9 @@ export const OraclePriceDisplay = () => {
 };
 
 export default OraclePriceDisplay;
+
+
+
+
+
+
