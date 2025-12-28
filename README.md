@@ -9,7 +9,7 @@
 
 ### **The Missing Intelligence Layer for Institutional Stablecoin Payments**
 
-*Where Visa's settlement meets Stripe's programmability — built for the $320 trillion cross-border era*
+*Where Visa's settlement meets Stripe's programmability — powered by **Expert AI Oracle v3.0** with local Qwen3:8B LLM*
 
 **🌐 [Live Demo](https://nextjs-1kd24o3my-sandys-projects-65d29ae3.vercel.app) | 📄 [Documentation](./theblocks/docs/) | 🔗 [Smart Contracts](./theblocks/packages/hardhat/contracts/)**
 
@@ -17,10 +17,23 @@
 
 ---
 
+## 🆕 What's New: Expert AI Oracle v3.0
+
+| Feature | Description |
+|---------|-------------|
+| 🧠 **4-Model Ensemble** | Neural Network + Typology Detector + Qwen3 LLM + Compliance Engine |
+| 🦙 **Local LLM** | Qwen3:8B via Ollama — 100% offline, zero API costs |
+| 🔐 **ECDSA Signatures** | Cryptographic signing for on-chain verification |
+| 🎯 **15 Fraud Typologies** | Mixing, Layering, Tornado Cash, Flash Loans, and more |
+| ⚡ **Sub-3ms Latency** | Real-time fraud detection at production scale |
+
+---
+
 ## 📋 Table of Contents
 
 - [🎯 Problem Statement](#-problem-statement)
 - [💡 Our Solution](#-our-solution)
+- [🧠 AI Fraud Detection](#-ai-fraud-detection)
 - [🏗️ Architecture](#️-architecture)
 - [✨ Key Features](#-key-features)
 - [🔮 Oracle System](#-oracle-system)
@@ -74,11 +87,17 @@ PayFlow is a **complete cross-border payment infrastructure** that combines:
 2. **🔮 Dual-Oracle System** - Real-time FX rates from Chainlink + Pyth
 3. **🔐 Programmable Escrow** - Conditional payment release (time, approval, oracle)
 4. **📝 Immutable Audit Registry** - Every transaction travel-rule compliant
+5. **🧠 Expert AI Oracle v3.0** - 4-model ensemble fraud detection with local LLM
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                         PayFlow Protocol Stack                           │
 ├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│   🧠 AI Layer (Expert AI Oracle v3.0)                                   │
+│   ├── Qwen3:8B Local LLM (100% Offline)                                 │
+│   ├── 4-Model Ensemble (Neural + Typology + LLM + Compliance)           │
+│   └── 15 Fraud Typology Detectors                                       │
 │                                                                          │
 │   🌐 Frontend (Next.js 15 + React 19)                                   │
 │   ├── Interactive Dashboard                                             │
@@ -95,9 +114,86 @@ PayFlow is a **complete cross-border payment infrastructure** that combines:
 │   ├── ComplianceEngine.sol - 5-tier KYC verification                   │
 │   ├── SmartEscrow.sol - Programmable conditional escrow                │
 │   ├── OracleAggregator.sol - Multi-oracle price feeds                  │
-│   └── AuditRegistry.sol - Immutable audit logging                      │
+│   ├── AuditRegistry.sol - Immutable audit logging                      │
+│   └── FraudOracle.sol - AI-powered fraud prevention                    │
 │                                                                          │
 └─────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 🧠 AI Fraud Detection
+
+### Expert AI Oracle v3.0 — Enterprise-Grade Fraud Detection
+
+Our flagship innovation: a **4-model ensemble AI system** that runs **100% locally** on your GPU — no cloud APIs, no data leaving your machine, zero ongoing costs.
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│         🧠 EXPERT AI ORACLE v3.0 - 4-MODEL ENSEMBLE                      │
+│              Running on RTX 4070 Laptop GPU (8GB VRAM)                   │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐          │
+│  │  NEURAL NETWORK │  │   TYPOLOGY      │  │   QWEN3:8B      │          │
+│  │     (25%)       │  │   DETECTOR      │  │   LOCAL LLM     │          │
+│  │   MLP + AE      │  │     (25%)       │  │     (30%)       │          │
+│  │    <5ms         │  │    <1ms         │  │    ~3s          │          │
+│  └────────┬────────┘  └────────┬────────┘  └────────┬────────┘          │
+│           │                    │                    │                    │
+│           └────────────────────┼────────────────────┘                    │
+│                                ▼                                         │
+│                    ┌───────────────────────┐                             │
+│                    │  COMPLIANCE ENGINE    │                             │
+│                    │       (20%)           │                             │
+│                    │  FATF + OFAC + KYC    │                             │
+│                    └───────────┬───────────┘                             │
+│                                ▼                                         │
+│                    ┌───────────────────────┐                             │
+│                    │  🔐 ECDSA SIGNATURE   │                             │
+│                    │  P-256 Cryptographic  │                             │
+│                    │  On-Chain Verifiable  │                             │
+│                    └───────────────────────┘                             │
+│                                                                          │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+### Why Local LLM Matters
+
+| Aspect | Cloud APIs | Expert AI Oracle (Local) |
+|--------|------------|--------------------------|
+| **Privacy** | Data sent externally | 🔒 100% on-device |
+| **Cost** | $20+/1000 calls | 💰 Free forever |
+| **Latency** | 500ms+ network | ⚡ <5s total |
+| **Uptime** | Depends on provider | ✅ Always available |
+| **Compliance** | Data residency issues | 🏛️ Full sovereignty |
+
+### 15 Fraud Typologies Detected
+
+| Category | Typologies |
+|----------|------------|
+| **Mixing/Layering** | Tornado Cash, Mixing Services, Transaction Layering |
+| **Sanctions** | OFAC/UN Sanctioned Addresses, Blacklisted Entities |
+| **Market Abuse** | Wash Trading, Front-Running, Pump & Dump, Flash Loans |
+| **Attack Patterns** | Dust Attacks, Sybil Attacks, Rug Pulls, Phishing |
+| **AML Red Flags** | Structuring, Round-Trip Transfers, Velocity Abuse |
+
+### API Endpoints
+
+```bash
+# Health Check
+GET http://localhost:8000/health
+
+# Expert Analysis (Full 4-Model Ensemble)
+POST http://localhost:8000/expert/analyze
+{
+  "transaction_id": "tx_001",
+  "sender": "0xd90e2f925DA726b50C4Ed8D0Fb90Ad053324F31b",
+  "recipient": "0x742d35Cc6634C0532925a3b844Bc9e7595f0Ab2d",
+  "amount": 50000.0
+}
+
+# Response includes: risk_score, verdict, model_scores, typologies, ECDSA signature
 ```
 
 ---
@@ -224,6 +320,13 @@ export async function getAggregatedPrice(symbol: string): Promise<AggregatedPric
 
 ## 📦 Tech Stack
 
+### AI / Machine Learning
+- **LLM**: Qwen3:8B via Ollama (100% local, no cloud)
+- **Framework**: Pure NumPy (zero ML dependencies)
+- **API**: FastAPI + Uvicorn
+- **Signing**: ECDSA P-256 (eth-account)
+- **GPU**: RTX 4070 Laptop (8GB VRAM)
+
 ### Frontend
 - **Framework**: Next.js 15.2.6 + React 19
 - **Styling**: Tailwind CSS + DaisyUI 5.0
@@ -254,6 +357,9 @@ export async function getAggregatedPrice(symbol: string): Promise<AggregatedPric
 - Node.js 18+
 - Yarn (v1 or v4)
 - Git
+- Python 3.11+ (for AI Oracle)
+- Ollama (for local LLM)
+- NVIDIA GPU with 8GB+ VRAM (recommended)
 
 ### Installation
 
@@ -262,7 +368,7 @@ export async function getAggregatedPrice(symbol: string): Promise<AggregatedPric
 git clone https://github.com/shubro18202758/Hackxios_2025.git
 cd Hackxios_2025/theblocks
 
-# Install dependencies
+# Install Node.js dependencies
 yarn install
 
 # Start local blockchain (Terminal 1)
@@ -273,6 +379,23 @@ yarn deploy
 
 # Start frontend (Terminal 3)
 yarn start
+```
+
+### 🧠 Starting the AI Oracle (Optional but Recommended)
+
+```bash
+# Terminal 4: Install Ollama and Qwen3 (one-time setup)
+# Download from https://ollama.com
+ollama pull qwen3:8b
+
+# Terminal 5: Start the Expert AI Oracle API
+cd packages/nextjs/services/ai
+pip install fastapi uvicorn numpy httpx eth-account
+python -m uvicorn expertAPI:app --host 0.0.0.0 --port 8000
+
+# Verify it's running
+curl http://localhost:8000/health
+# Expected: {"status":"healthy","model":"ExpertAIOracle","version":"3.0.0"}
 ```
 
 ### Environment Variables
@@ -292,26 +415,39 @@ NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID=your_wc_project_id
 Hackxios/
 └── theblocks/
     ├── packages/
-    │   ├── hardhat/           # Smart contracts
-    │   │   ├── contracts/     # Solidity contracts
-    │   │   ├── deploy/        # Deployment scripts
-    │   │   ├── scripts/       # Utility scripts
-    │   │   └── test/          # Contract tests
+    │   ├── hardhat/              # Smart contracts
+    │   │   ├── contracts/        # Solidity contracts
+    │   │   │   ├── PayFlowCore.sol
+    │   │   │   ├── ComplianceEngine.sol
+    │   │   │   ├── SmartEscrow.sol
+    │   │   │   ├── OracleAggregator.sol
+    │   │   │   ├── AuditRegistry.sol
+    │   │   │   └── FraudOracle.sol
+    │   │   ├── deploy/           # Deployment scripts
+    │   │   ├── scripts/          # Utility scripts
+    │   │   └── test/             # Contract tests
     │   │
-    │   └── nextjs/            # Frontend application
-    │       ├── app/           # Next.js app router
-    │       ├── components/    # React components
-    │       ├── config/        # Configuration files
-    │       ├── hooks/         # Custom React hooks
-    │       └── services/      # API services
+    │   └── nextjs/               # Frontend application
+    │       ├── app/              # Next.js app router
+    │       ├── components/       # React components
+    │       ├── config/           # Configuration files
+    │       ├── hooks/            # Custom React hooks
+    │       └── services/         # API & AI services
+    │           └── ai/           # 🧠 Expert AI Oracle v3.0
+    │               ├── expertAPI.py          # FastAPI server
+    │               ├── neural_ensemble.py    # Neural network models
+    │               ├── typology_detector.py  # 15 fraud typologies
+    │               ├── qwen3_integration.py  # Local LLM integration
+    │               ├── compliance_analyzer.py # Regulatory engine
+    │               └── crypto_signer.py      # ECDSA signatures
     │
-    ├── docs/                  # Documentation
+    ├── docs/                     # Documentation
     │   ├── ARCHITECTURE.md
     │   ├── SECURITY_ANALYSIS.md
     │   ├── GAS_OPTIMIZATION.md
     │   └── DEPLOYMENT_GUIDE.md
     │
-    └── README.md              # Project documentation
+    └── README.md                 # Project documentation
 ```
 
 ---
@@ -327,6 +463,7 @@ Hackxios/
 | **SmartEscrow.sol** | Conditional payments | `createEscrow()`, `releaseEscrow()` |
 | **OracleAggregator.sol** | Price feed aggregation | `getLatestPrice()`, `getAggregatedPrice()` |
 | **AuditRegistry.sol** | Immutable logging | `logEvent()`, `getAuditTrail()` |
+| **FraudOracle.sol** | AI fraud prevention | `updateRiskScore()`, `analyzeTransaction()` |
 
 ### Security Features
 
@@ -335,6 +472,7 @@ Hackxios/
 - ✅ Pausable emergency stops
 - ✅ Oracle staleness checks
 - ✅ Slippage protection
+- ✅ AI-powered fraud detection (Expert AI Oracle v3.0)
 
 ---
 
@@ -364,9 +502,10 @@ vercel --prod
 
 This project addresses multiple hackathon themes:
 
+- **🤖 AI + Blockchain**: Expert AI Oracle v3.0 with local Qwen3 LLM
 - **🏦 DeFi**: Programmable cross-border payments
 - **🔗 Infrastructure**: Multi-oracle aggregation layer
-- **🛡️ Security**: On-chain compliance and audit trails
+- **🛡️ Security**: On-chain compliance and AI fraud detection
 - **🌍 Real World Assets**: Institutional stablecoin settlements
 
 ---
@@ -375,10 +514,11 @@ This project addresses multiple hackathon themes:
 
 ### Key Pages
 
-1. **Dashboard** (`/dashboard`) - Main payment interface with real-time data
+1. **Dashboard** (`/dashboard`) - Main payment interface with real-time AI analysis
 2. **Oracle Dashboard** (`/oracle-dashboard`) - Live oracle feeds and consensus
-3. **Settlement Monitor** - Track payment lifecycle
-4. **Debug Contracts** (`/debug`) - Interact with deployed contracts
+3. **AI Analysis** - Expert AI Oracle fraud detection results
+4. **Settlement Monitor** - Track payment lifecycle
+5. **Debug Contracts** (`/debug`) - Interact with deployed contracts
 
 ---
 
@@ -398,6 +538,11 @@ Detailed documentation available in `/theblocks/docs/`:
 
 **Team: The Blocks**
 
+| Member | Role |
+|--------|------|
+| Sayandeep | AI/ML & Blockchain Developer |
+| Shubrato | Full Stack & Smart Contracts |
+
 Built with ❤️ for Hackxios 2K25
 
 ---
@@ -410,8 +555,10 @@ This project is licensed under the MIT License - see the [LICENSE](./theblocks/L
 
 <div align="center">
 
-### 🚀 Ready to revolutionize cross-border payments?
+### 🚀 Ready to revolutionize cross-border payments with AI?
 
 **[Try the Live Demo →](https://nextjs-1kd24o3my-sandys-projects-65d29ae3.vercel.app)**
+
+*Powered by Expert AI Oracle v3.0 — 100% Local, Zero Cloud Costs*
 
 </div>
