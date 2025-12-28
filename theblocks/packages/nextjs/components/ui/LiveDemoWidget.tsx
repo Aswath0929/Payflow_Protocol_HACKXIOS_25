@@ -288,7 +288,7 @@ export function OracleConsensusDemo() {
 }
 
 // ============================================
-// SECURITY SHIELD DEMO - For Attack Simulator
+// SECURITY SHIELD DEMO - For Security Demonstration
 // ============================================
 
 export function SecurityShieldDemo() {

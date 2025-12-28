@@ -69,3 +69,6 @@ export { NeuralNetworkBackground } from "./NeuralNetworkBackground";
 
 // Magic Cursor
 export { MagicCursor } from "./MagicCursor";
+
+// Page Background
+export { PageBackground } from "./PageBackground";

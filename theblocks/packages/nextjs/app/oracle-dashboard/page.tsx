@@ -7,6 +7,7 @@ import { ContractStatus } from "~~/components/oracle/ContractStatus";
 import { SecurityMetrics } from "~~/components/oracle/SecurityMetrics";
 import { ThreeOracleDashboard } from "~~/components/oracle/ThreeOracleDashboard";
 import { OracleConsensusDemo, SecurityShieldDemo } from "~~/components/ui/LiveDemoWidget";
+import { PageBackground } from "~~/components/ui/PageBackground";
 import { ScrollReveal } from "~~/components/ui/ScrollReveal";
 
 /**
@@ -48,28 +49,9 @@ const OraclePageContent = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f] text-white overflow-hidden">
-      {/* Animated Background */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-violet-500/10 rounded-full blur-3xl animate-pulse" />
-        <div
-          className="absolute bottom-0 right-1/4 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl animate-pulse"
-          style={{ animationDelay: "1s" }}
-        />
-        <div
-          className="absolute top-1/2 left-1/2 w-64 h-64 bg-blue-500/5 rounded-full blur-2xl"
-          style={{ animation: "bounce 4s ease-in-out infinite" }}
-        />
-
-        {/* Grid Pattern */}
-        <div
-          className="absolute inset-0 opacity-[0.02]"
-          style={{
-            backgroundImage: `linear-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.1) 1px, transparent 1px)`,
-            backgroundSize: "80px 80px",
-          }}
-        />
-      </div>
+    <div className="min-h-screen text-white overflow-hidden">
+      {/* Hexagonal Oracle Network Background */}
+      <PageBackground theme="oracle" intensity="medium" />
 
       {/* Header */}
       <header
@@ -163,7 +145,7 @@ const OraclePageContent = () => {
                   <span className="text-cyan-400 font-bold">outlier detection</span> makes such attacks mathematically
                   impossible.
                   <span className="text-zinc-500 block mt-1 italic">
-                    If one oracle lies, consensus prevails. Try it yourself in Attack Sim.
+                    If one oracle lies, consensus prevails. See the Security Demo below.
                   </span>
                 </p>
               </div>

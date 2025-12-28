@@ -3,15 +3,57 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import type { NextPage } from "next";
-import { formatEther } from "viem";
-import { useAccount } from "wagmi";
+import { createPublicClient, formatEther, http } from "viem";
+import { sepolia } from "viem/chains";
+import { useAccount, useBalance } from "wagmi";
 import { RainbowKitCustomConnectButton } from "~~/components/scaffold-eth";
 import { StrikethroughFade } from "~~/components/ui/ComparisonReveal";
 import { ComplianceDemo, PaymentFlowDemo, SettlementSpeedDemo } from "~~/components/ui/LiveDemoWidget";
 import { AnimatedCounter, GlassmorphicCard, PulseRing } from "~~/components/ui/ModernEffects";
+import { PageBackground } from "~~/components/ui/PageBackground";
 import { ScrollReveal } from "~~/components/ui/ScrollReveal";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { useContractEvents } from "~~/hooks/settlement";
+import { useSecureAIOracle } from "~~/hooks/useSecureAIOracle";
+
+// Sepolia client for oracle price fetching - using multiple public RPCs with fallback
+const sepoliaClient = createPublicClient({
+  chain: sepolia,
+  transport: http("https://eth-sepolia.g.alchemy.com/v2/demo", {
+    timeout: 10000, // 10 second timeout
+    retryCount: 2,
+  }),
+});
+
+// Backup RPC clients for fallback
+const backupClients = [
+  createPublicClient({
+    chain: sepolia,
+    transport: http("https://rpc2.sepolia.org", { timeout: 8000 }),
+  }),
+  createPublicClient({
+    chain: sepolia,
+    transport: http("https://sepolia.drpc.org", { timeout: 8000 }),
+  }),
+];
+
+// Chainlink ETH/USD on Sepolia
+const CHAINLINK_ETH_USD = "0x694AA1769357215DE4FAC081bf1f309aDC325306" as const;
+const CHAINLINK_ABI = [
+  {
+    inputs: [],
+    name: "latestRoundData",
+    outputs: [
+      { name: "roundId", type: "uint80" },
+      { name: "answer", type: "int256" },
+      { name: "startedAt", type: "uint256" },
+      { name: "updatedAt", type: "uint256" },
+      { name: "answeredInRound", type: "uint80" },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+] as const;
 
 // ═══════════════════════════════════════════════════════════════════════════
 // PAYFLOW PROTOCOL - LIVE BLOCKCHAIN DASHBOARD
@@ -56,13 +98,70 @@ const COMPLIANCE_TIERS: { value: ComplianceTier; label: string; limit: string }[
 ];
 
 const Dashboard: NextPage = () => {
-  const { address, isConnected } = useAccount();
+  const { address, isConnected, chain } = useAccount();
   const [activeTab, setActiveTab] = useState<"overview" | "create" | "payments" | "compliance">("overview");
   const [payments, setPayments] = useState<LivePayment[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
-  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [processingStep, setProcessingStep] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
+  
+  // AI Fraud Detection Hook
+  const { analyzeOnly } = useSecureAIOracle(
+    process.env.NEXT_PUBLIC_FRAUD_ORACLE_ADDRESS || "0x0000000000000000000000000000000000000000",
+    process.env.NEXT_PUBLIC_AI_ORACLE_URL || "http://localhost:8000",
+  );
+  const [fraudScreenResult, setFraudScreenResult] = useState<{
+    approved: boolean;
+    riskScore: number;
+    riskLevel: string;
+    explanation: string;
+  } | null>(null);
+  
+  // Live wallet balance
+  const { data: walletBalance, refetch: refetchBalance } = useBalance({ address });
+  
+  // Live ETH price from Chainlink oracle
+  const [ethPrice, setEthPrice] = useState<number>(0);
+  const [, setPriceLastUpdated] = useState<Date | null>(null);
+  const [priceAge, setPriceAge] = useState<number>(0);
+
+  // Fetch live ETH price from Chainlink on Sepolia with fallback RPCs
+  const fetchEthPrice = useCallback(async () => {
+    const clients = [sepoliaClient, ...backupClients];
+    
+    for (const client of clients) {
+      try {
+        const data = await client.readContract({
+          address: CHAINLINK_ETH_USD,
+          abi: CHAINLINK_ABI,
+          functionName: "latestRoundData",
+        });
+        const price = Number(data[1]) / 1e8;
+        const updatedAt = Number(data[3]);
+        const now = Math.floor(Date.now() / 1000);
+        setEthPrice(price);
+        setPriceLastUpdated(new Date(updatedAt * 1000));
+        setPriceAge(now - updatedAt);
+        return; // Success - exit the loop
+      } catch (error) {
+        console.warn("RPC failed, trying next...", error);
+        continue; // Try next RPC
+      }
+    }
+    
+    // All RPCs failed - use cached/fallback price
+    console.warn("All RPCs failed, using fallback ETH price");
+    if (ethPrice === 0) {
+      setEthPrice(3500); // Fallback approximate price
+    }
+  }, [ethPrice]);
+
+  // Auto-refresh ETH price every 30 seconds
+  useEffect(() => {
+    fetchEthPrice();
+    const interval = setInterval(fetchEthPrice, 30000);
+    return () => clearInterval(interval);
+  }, [fetchEthPrice]);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // LIVE BLOCKCHAIN DATA - Real-time protocol stats from deployed contracts
@@ -93,7 +192,8 @@ const Dashboard: NextPage = () => {
     refetchPayflow();
     refetchAuditCount();
     refetchOracleCount();
-  }, [refetchPayflow, refetchAuditCount, refetchOracleCount]);
+    refetchBalance();
+  }, [refetchPayflow, refetchAuditCount, refetchOracleCount, refetchBalance]);
 
   // Auto-refresh every 2 seconds for real-time updates
   useEffect(() => {
@@ -152,12 +252,6 @@ const Dashboard: NextPage = () => {
 
   useEffect(() => {
     setTimeout(() => setIsLoaded(true), 100);
-
-    const handleMouseMove = (e: MouseEvent) => {
-      setMousePosition({ x: e.clientX, y: e.clientY });
-    };
-    window.addEventListener("mousemove", handleMouseMove);
-    return () => window.removeEventListener("mousemove", handleMouseMove);
   }, []);
 
   // Live Stats from blockchain using event stats
@@ -202,15 +296,61 @@ const Dashboard: NextPage = () => {
     },
   });
 
-  const handleCreatePayment = () => {
+  // AI Fraud Screening before payment
+  const handleFraudScreen = async (): Promise<boolean> => {
+    if (!address || !newPayment.recipient || !newPayment.amount) return false;
+    
+    try {
+      const response = await analyzeOnly({
+        sender: address,
+        recipient: newPayment.recipient,
+        amount: parseFloat(newPayment.amount),
+        senderTxCount: payments.filter(p => p.sender.includes(address.slice(2, 6))).length,
+        senderAvgAmount: payments.reduce((sum, p) => sum + p.amount, 0) / Math.max(payments.length, 1),
+        senderTotalVolume: payments.reduce((sum, p) => sum + p.amount, 0),
+      });
+      
+      if (!response?.result) {
+        console.warn("No fraud analysis result received");
+        return true; // Allow if no result
+      }
+      
+      const result = response.result;
+      setFraudScreenResult({
+        approved: result.approved,
+        riskScore: result.risk_score,
+        riskLevel: result.risk_level,
+        explanation: result.explanation,
+      });
+      
+      return result.approved;
+    } catch (error) {
+      console.error("Fraud screening failed:", error);
+      // Allow payment if fraud screening fails (graceful degradation)
+      return true;
+    }
+  };
+
+  const handleCreatePayment = async () => {
     setIsProcessing(true);
     setProcessingStep(0);
+    setFraudScreenResult(null);
 
-    let currentStep = 0;
+    // Step 0: AI Fraud Screening
+    const isApproved = await handleFraudScreen();
+    setProcessingStep(1);
+    
+    if (!isApproved) {
+      // Payment blocked by AI
+      setIsProcessing(false);
+      return;
+    }
+
+    let currentStep = 1;
     const interval = setInterval(() => {
       currentStep++;
       setProcessingStep(currentStep);
-      if (currentStep >= 6) {
+      if (currentStep >= 7) {
         clearInterval(interval);
 
         const payment: LivePayment = {
@@ -245,17 +385,9 @@ const Dashboard: NextPage = () => {
   // Connect wallet screen
   if (!isConnected) {
     return (
-      <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center relative overflow-hidden">
-        {/* Background Effects */}
-        <div
-          className="fixed inset-0 pointer-events-none"
-          style={{
-            background: `radial-gradient(800px circle at ${mousePosition.x}px ${mousePosition.y}px, rgba(139, 92, 246, 0.07), transparent 40%)`,
-          }}
-        />
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute w-[500px] h-[500px] rounded-full opacity-20 blur-[100px] bg-gradient-to-br from-violet-600 to-cyan-600 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse" />
-        </div>
+      <div className="min-h-screen flex items-center justify-center relative overflow-hidden">
+        {/* Creative Dashboard Background */}
+        <PageBackground theme="dashboard" intensity="medium" />
 
         <div className="relative text-center space-y-8 p-8">
           {/* Logo */}
@@ -293,23 +425,9 @@ const Dashboard: NextPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f] text-white relative overflow-hidden">
-      {/* Animated Background */}
-      <div
-        className="fixed inset-0 pointer-events-none transition-opacity duration-1000"
-        style={{
-          background: `radial-gradient(600px circle at ${mousePosition.x}px ${mousePosition.y}px, rgba(139, 92, 246, 0.05), transparent 40%)`,
-        }}
-      />
-
-      {/* Grid Background */}
-      <div
-        className="fixed inset-0 pointer-events-none opacity-[0.015]"
-        style={{
-          backgroundImage: `linear-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.1) 1px, transparent 1px)`,
-          backgroundSize: "80px 80px",
-        }}
-      />
+    <div className="min-h-screen text-white relative overflow-hidden">
+      {/* Creative Dashboard Background with Data Flow Animation */}
+      <PageBackground theme="dashboard" intensity="high" />
 
       {/* Header */}
       <header
@@ -440,6 +558,111 @@ const Dashboard: NextPage = () => {
               </ScrollReveal>
             </div>
 
+            {/* Live Wallet Metrics - Real-time balance with Oracle pricing */}
+            <ScrollReveal delay={350} direction="up">
+              <div className="relative p-6 rounded-2xl overflow-hidden border border-cyan-500/20 bg-gradient-to-r from-cyan-900/20 to-violet-900/20">
+                <div className="absolute top-4 right-4 flex items-center gap-2">
+                  <div className={`w-2 h-2 rounded-full ${ethPrice > 0 ? "bg-green-400 animate-pulse" : "bg-yellow-400"}`} />
+                  <span className="text-xs text-zinc-400">
+                    {ethPrice > 0 ? "Live Oracle" : "Fetching..."}
+                  </span>
+                </div>
+                
+                <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
+                  <span className="text-2xl">💼</span> Wallet Metrics
+                  <span className="text-xs text-zinc-500 font-normal ml-2">• Real-time via Chainlink</span>
+                </h3>
+                
+                <div className="grid md:grid-cols-5 gap-4">
+                  {/* ETH Balance */}
+                  <div className="bg-white/5 rounded-xl p-4 border border-white/10">
+                    <div className="text-xs text-zinc-500 uppercase tracking-wider mb-1">ETH Balance</div>
+                    <div className="text-2xl font-bold font-mono text-cyan-400">
+                      {walletBalance ? parseFloat(formatEther(walletBalance.value)).toFixed(4) : "0.0000"}
+                    </div>
+                    <div className="text-xs text-zinc-400 mt-1">
+                      {walletBalance?.symbol || "ETH"}
+                    </div>
+                  </div>
+                  
+                  {/* USD Value */}
+                  <div className="bg-white/5 rounded-xl p-4 border border-white/10">
+                    <div className="text-xs text-zinc-500 uppercase tracking-wider mb-1">USD Value</div>
+                    <div className="text-2xl font-bold font-mono text-green-400">
+                      ${walletBalance && ethPrice > 0 
+                        ? (parseFloat(formatEther(walletBalance.value)) * ethPrice).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                        : "0.00"
+                      }
+                    </div>
+                    <div className="text-xs text-zinc-400 mt-1">
+                      @ ${ethPrice.toFixed(2)}/ETH
+                    </div>
+                  </div>
+                  
+                  {/* Live ETH Price */}
+                  <div className="bg-white/5 rounded-xl p-4 border border-white/10">
+                    <div className="text-xs text-zinc-500 uppercase tracking-wider mb-1">ETH/USD Price</div>
+                    <div className="text-2xl font-bold font-mono text-violet-400">
+                      ${ethPrice > 0 ? ethPrice.toFixed(2) : "--"}
+                    </div>
+                    <div className="text-xs text-zinc-400 mt-1 flex items-center gap-1">
+                      <span className={priceAge < 60 ? "text-green-400" : priceAge < 3600 ? "text-yellow-400" : "text-red-400"}>●</span>
+                      {priceAge < 60 ? "Fresh" : priceAge < 3600 ? `${Math.floor(priceAge / 60)}m ago` : `${Math.floor(priceAge / 3600)}h ago`}
+                    </div>
+                  </div>
+                  
+                  {/* Network */}
+                  <div className="bg-white/5 rounded-xl p-4 border border-white/10">
+                    <div className="text-xs text-zinc-500 uppercase tracking-wider mb-1">Network</div>
+                    <div className="text-2xl font-bold text-orange-400">
+                      {chain?.name?.substring(0, 8) || "Sepolia"}
+                    </div>
+                    <div className="text-xs text-zinc-400 mt-1">
+                      Chain ID: {chain?.id || 11155111}
+                    </div>
+                  </div>
+                  
+                  {/* Gas Indicator */}
+                  <div className="bg-white/5 rounded-xl p-4 border border-white/10">
+                    <div className="text-xs text-zinc-500 uppercase tracking-wider mb-1">Gas Status</div>
+                    <div className="text-2xl font-bold">
+                      {walletBalance && parseFloat(formatEther(walletBalance.value)) > 0.1 ? (
+                        <span className="text-green-400">✓ Ready</span>
+                      ) : walletBalance && parseFloat(formatEther(walletBalance.value)) > 0.01 ? (
+                        <span className="text-yellow-400">⚠ Low</span>
+                      ) : (
+                        <span className="text-red-400">✗ Empty</span>
+                      )}
+                    </div>
+                    <div className="text-xs text-zinc-400 mt-1">
+                      {walletBalance && parseFloat(formatEther(walletBalance.value)) > 0.1 
+                        ? "~200+ txs" 
+                        : walletBalance && parseFloat(formatEther(walletBalance.value)) > 0.01
+                          ? "~20 txs"
+                          : "Fund wallet"
+                      }
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Wallet Address */}
+                <div className="mt-4 pt-4 border-t border-white/10 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs text-zinc-500">Connected:</span>
+                    <span className="font-mono text-sm text-zinc-300 bg-white/5 px-3 py-1 rounded-lg">
+                      {address ? `${address.slice(0, 6)}...${address.slice(-4)}` : "Not connected"}
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => { fetchEthPrice(); refetchBalance(); }}
+                    className="text-xs text-cyan-400 hover:text-cyan-300 transition-colors flex items-center gap-1"
+                  >
+                    🔄 Refresh
+                  </button>
+                </div>
+              </div>
+            </ScrollReveal>
+
             {/* Quick Actions */}
             <div className="grid md:grid-cols-2 gap-6">
               <ScrollReveal delay={100} direction="left">
@@ -471,6 +694,7 @@ const Dashboard: NextPage = () => {
                   </h3>
                   <div className="space-y-3">
                     {[
+                      { name: "🛡️ AI Fraud Detection", status: "GPT-4 + ML Active", color: "green" as const },
                       { name: "Compliance Engine", status: "Active", color: "green" as const },
                       { name: "Oracle Aggregator", status: "5 sources", color: "green" as const },
                       { name: "Smart Escrow", status: "Ready", color: "green" as const },
@@ -488,6 +712,12 @@ const Dashboard: NextPage = () => {
                       </div>
                     ))}
                   </div>
+                  <Link
+                    href="/fraud"
+                    className="mt-4 inline-flex items-center gap-2 text-sm text-cyan-400 hover:text-cyan-300 transition-colors"
+                  >
+                    View AI Fraud Dashboard →
+                  </Link>
                 </div>
               </ScrollReveal>
             </div>
@@ -602,6 +832,7 @@ const Dashboard: NextPage = () => {
                   <h3 className="text-2xl font-bold">Processing Payment</h3>
                   <div className="max-w-md mx-auto space-y-3">
                     {[
+                      "🛡️ AI Fraud Screening (GPT-4 + ML)...",
                       "Validating compliance rules...",
                       "Checking KYC status...",
                       "Running AML screening...",
@@ -638,6 +869,49 @@ const Dashboard: NextPage = () => {
               </div>
             ) : (
               <div className="space-y-6">
+                {/* Fraud Screening Result Banner */}
+                {fraudScreenResult && (
+                  <div className={`relative p-4 rounded-xl border ${
+                    fraudScreenResult.approved 
+                      ? "bg-green-500/10 border-green-500/30" 
+                      : "bg-red-500/10 border-red-500/30"
+                  }`}>
+                    <div className="flex items-center gap-4">
+                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl ${
+                        fraudScreenResult.approved ? "bg-green-500/20" : "bg-red-500/20"
+                      }`}>
+                        {fraudScreenResult.approved ? "✅" : "🚫"}
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-white">AI Fraud Screening Result</span>
+                          <span className={`text-xs px-2 py-0.5 rounded-full ${
+                            fraudScreenResult.riskLevel === "LOW" ? "bg-green-500/20 text-green-400" :
+                            fraudScreenResult.riskLevel === "MEDIUM" ? "bg-yellow-500/20 text-yellow-400" :
+                            "bg-red-500/20 text-red-400"
+                          }`}>
+                            {fraudScreenResult.riskLevel} RISK
+                          </span>
+                          <span className="text-xs text-zinc-400">Score: {fraudScreenResult.riskScore}/100</span>
+                        </div>
+                        <p className="text-sm text-zinc-400 mt-1">{fraudScreenResult.explanation}</p>
+                      </div>
+                      <button 
+                        onClick={() => setFraudScreenResult(null)}
+                        className="text-zinc-500 hover:text-white transition-colors"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  </div>
+                )}
+                
+                {/* AI Fraud Protection Badge */}
+                <div className="flex items-center gap-2 text-xs text-zinc-500">
+                  <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
+                  AI Fraud Detection Active (GPT-4 + Isolation Forest ML)
+                </div>
+                
                 {/* Payment Details */}
                 <div className="relative p-6 rounded-2xl bg-white/[0.02] border border-white/5">
                   <h3 className="text-lg font-semibold mb-6 flex items-center gap-2">

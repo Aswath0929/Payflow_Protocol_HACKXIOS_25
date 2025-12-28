@@ -20,7 +20,7 @@ import {
 // Create Sepolia public client
 const sepoliaClient = createPublicClient({
   chain: sepolia,
-  transport: http("https://eth-sepolia.g.alchemy.com/v2/cR4WnXePioePZ5fFrnSiR"),
+  transport: http("https://rpc.sepolia.org"),
 });
 
 // ========================================

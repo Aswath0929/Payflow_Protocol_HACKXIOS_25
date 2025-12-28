@@ -24,7 +24,11 @@ export const menuLinks: HeaderMenuLink[] = [
     href: "/dashboard",
   },
   {
-    label: "📊 Oracles",
+    label: "�️ AI Fraud",
+    href: "/fraud",
+  },
+  {
+    label: "�📊 Oracles",
     href: "/oracle-dashboard",
   },
   {

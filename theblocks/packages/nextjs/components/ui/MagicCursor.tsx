@@ -2,62 +2,71 @@
 
 import { useEffect, useRef, useState } from "react";
 
-interface Trail {
-  x: number;
-  y: number;
-  opacity: number;
-  scale: number;
-  hue: number;
-}
-
 /**
- * MagicCursor - AI-era custom cursor with particle trails
- * Creates an immersive, futuristic feel
+ * MagicCursor - Ultra-responsive custom cursor
+ * Optimized for zero lag with direct DOM manipulation
+ * No React state updates in animation loop = maximum performance
  */
 export function MagicCursor() {
-  const cursorRef = useRef<HTMLDivElement>(null);
+  const cursorRingRef = useRef<HTMLDivElement>(null);
   const cursorDotRef = useRef<HTMLDivElement>(null);
-  const trailsRef = useRef<Trail[]>([]);
-  const [isHovering, setIsHovering] = useState(false);
-  const [isClicking, setIsClicking] = useState(false);
-  const positionRef = useRef({ x: -100, y: -100 });
-  const requestRef = useRef<number>(0);
-  const previousTimeRef = useRef<number>(0);
+  const isVisibleRef = useRef(false);
+  const [isMounted, setIsMounted] = useState(false);
+
+  // Prevent hydration mismatch by only rendering on client
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   useEffect(() => {
-    let cursorX = -100;
-    let cursorY = -100;
-    let targetX = -100;
-    let targetY = -100;
-    let hue = 260; // Start with purple
+    // Check for touch device
+    if (window.matchMedia("(pointer: coarse)").matches) {
+      return;
+    }
 
-    const handleMouseMove = (e: MouseEvent) => {
-      targetX = e.clientX;
-      targetY = e.clientY;
-      positionRef.current = { x: e.clientX, y: e.clientY };
+    if (!isMounted) return;
 
-      // Add trail particle
-      trailsRef.current.push({
-        x: e.clientX,
-        y: e.clientY,
-        opacity: 0.8,
-        scale: 1,
-        hue: hue,
-      });
+    const cursorRing = cursorRingRef.current;
+    const cursorDot = cursorDotRef.current;
+    if (!cursorRing || !cursorDot) return;
 
-      // Keep trail length manageable
-      if (trailsRef.current.length > 20) {
-        trailsRef.current.shift();
+    // State variables (no React state for max performance)
+    let mouseX = -100;
+    let mouseY = -100;
+    let ringX = -100;
+    let ringY = -100;
+    let isClicking = false;
+    let animationId: number;
+
+    // Direct mouse tracking - no lag
+    const onMouseMove = (e: MouseEvent) => {
+      mouseX = e.clientX;
+      mouseY = e.clientY;
+
+      if (!isVisibleRef.current) {
+        isVisibleRef.current = true;
+        cursorRing.style.opacity = "1";
+        cursorDot.style.opacity = "1";
       }
 
-      // Cycle hue for rainbow effect
-      hue = (hue + 0.5) % 360;
+      // Dot follows instantly
+      cursorDot.style.left = `${mouseX}px`;
+      cursorDot.style.top = `${mouseY}px`;
     };
 
-    const handleMouseDown = () => setIsClicking(true);
-    const handleMouseUp = () => setIsClicking(false);
+    const onMouseDown = () => {
+      isClicking = true;
+      cursorRing.classList.add("clicking");
+      cursorDot.classList.add("clicking");
+    };
 
-    const handleHoverStart = (e: MouseEvent) => {
+    const onMouseUp = () => {
+      isClicking = false;
+      cursorRing.classList.remove("clicking");
+      cursorDot.classList.remove("clicking");
+    };
+
+    const onMouseOver = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
       if (
         target.tagName === "BUTTON" ||
@@ -66,116 +75,137 @@ export function MagicCursor() {
         target.closest("a") ||
         target.classList.contains("hoverable")
       ) {
-        setIsHovering(true);
+        cursorRing.classList.add("hovering");
+        cursorDot.classList.add("hovering");
       }
     };
 
-    const handleHoverEnd = () => setIsHovering(false);
-
-    // Smooth animation loop
-    const animate = (time: number) => {
-      if (previousTimeRef.current !== undefined) {
-        // Smooth cursor follow
-        cursorX += (targetX - cursorX) * 0.15;
-        cursorY += (targetY - cursorY) * 0.15;
-
-        if (cursorRef.current) {
-          cursorRef.current.style.transform = `translate(${cursorX - 20}px, ${cursorY - 20}px)`;
-        }
-
-        if (cursorDotRef.current) {
-          cursorDotRef.current.style.transform = `translate(${targetX - 4}px, ${targetY - 4}px)`;
-        }
-
-        // Update trails
-        trailsRef.current = trailsRef.current
-          .map(trail => ({
-            ...trail,
-            opacity: trail.opacity * 0.92,
-            scale: trail.scale * 0.95,
-          }))
-          .filter(trail => trail.opacity > 0.01);
-      }
-
-      previousTimeRef.current = time;
-      requestRef.current = requestAnimationFrame(animate);
+    const onMouseOut = () => {
+      cursorRing.classList.remove("hovering");
+      cursorDot.classList.remove("hovering");
     };
 
-    window.addEventListener("mousemove", handleMouseMove);
-    window.addEventListener("mousedown", handleMouseDown);
-    window.addEventListener("mouseup", handleMouseUp);
-    window.addEventListener("mouseover", handleHoverStart);
-    window.addEventListener("mouseout", handleHoverEnd);
-    requestRef.current = requestAnimationFrame(animate);
+    const onMouseLeave = () => {
+      isVisibleRef.current = false;
+      cursorRing.style.opacity = "0";
+      cursorDot.style.opacity = "0";
+    };
+
+    // Smooth ring animation - uses lerp for gentle follow
+    const animate = () => {
+      // Lerp factor - higher = faster follow (0.25 is snappy but smooth)
+      const lerp = 0.25;
+
+      ringX += (mouseX - ringX) * lerp;
+      ringY += (mouseY - ringY) * lerp;
+
+      cursorRing.style.left = `${ringX}px`;
+      cursorRing.style.top = `${ringY}px`;
+
+      animationId = requestAnimationFrame(animate);
+    };
+
+    // Event listeners
+    document.addEventListener("mousemove", onMouseMove, { passive: true });
+    document.addEventListener("mousedown", onMouseDown, { passive: true });
+    document.addEventListener("mouseup", onMouseUp, { passive: true });
+    document.addEventListener("mouseover", onMouseOver, { passive: true });
+    document.addEventListener("mouseout", onMouseOut, { passive: true });
+    document.documentElement.addEventListener("mouseleave", onMouseLeave, { passive: true });
+
+    // Start animation
+    animationId = requestAnimationFrame(animate);
 
     return () => {
-      window.removeEventListener("mousemove", handleMouseMove);
-      window.removeEventListener("mousedown", handleMouseDown);
-      window.removeEventListener("mouseup", handleMouseUp);
-      window.removeEventListener("mouseover", handleHoverStart);
-      window.removeEventListener("mouseout", handleHoverEnd);
-      cancelAnimationFrame(requestRef.current);
+      document.removeEventListener("mousemove", onMouseMove);
+      document.removeEventListener("mousedown", onMouseDown);
+      document.removeEventListener("mouseup", onMouseUp);
+      document.removeEventListener("mouseover", onMouseOver);
+      document.removeEventListener("mouseout", onMouseOut);
+      document.documentElement.removeEventListener("mouseleave", onMouseLeave);
+      cancelAnimationFrame(animationId);
     };
-  }, []);
+  }, [isMounted]);
 
-  // Hide on mobile/touch devices
-  if (typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches) {
+  // Don't render on server or before hydration
+  if (!isMounted) {
     return null;
   }
 
   return (
     <>
-      {/* Trail particles */}
-      <div className="fixed inset-0 pointer-events-none z-[9998]">
-        {trailsRef.current.map((trail, i) => (
-          <div
-            key={i}
-            className="absolute w-2 h-2 rounded-full"
-            style={{
-              left: trail.x - 4,
-              top: trail.y - 4,
-              opacity: trail.opacity,
-              transform: `scale(${trail.scale})`,
-              background: `hsl(${trail.hue}, 70%, 60%)`,
-              boxShadow: `0 0 10px hsl(${trail.hue}, 70%, 60%)`,
-            }}
-          />
-        ))}
-      </div>
-
-      {/* Main cursor ring */}
+      {/* Cursor Ring - follows with slight delay */}
       <div
-        ref={cursorRef}
-        className={`fixed pointer-events-none z-[9999] w-10 h-10 rounded-full border-2 transition-all duration-200 ${
-          isHovering
-            ? "border-cyan-400 scale-150 bg-cyan-400/10"
-            : isClicking
-              ? "border-violet-400 scale-75 bg-violet-400/20"
-              : "border-violet-500/50"
-        }`}
+        ref={cursorRingRef}
+        className="magic-cursor-ring"
         style={{
-          boxShadow: isHovering
-            ? "0 0 30px rgba(34, 211, 238, 0.4), inset 0 0 20px rgba(34, 211, 238, 0.1)"
-            : "0 0 20px rgba(139, 92, 246, 0.3)",
+          position: "fixed",
+          width: "40px",
+          height: "40px",
+          borderRadius: "50%",
+          border: "2px solid rgba(139, 92, 246, 0.6)",
+          pointerEvents: "none",
+          zIndex: 99999,
+          transform: "translate(-50%, -50%)",
+          opacity: 0,
+          transition: "width 0.15s, height 0.15s, border-color 0.15s, background-color 0.15s",
+          boxShadow: "0 0 20px rgba(139, 92, 246, 0.3)",
           mixBlendMode: "screen",
+          willChange: "left, top",
         }}
       />
 
-      {/* Center dot */}
+      {/* Cursor Dot - instant follow */}
       <div
         ref={cursorDotRef}
-        className={`fixed pointer-events-none z-[9999] w-2 h-2 rounded-full transition-all duration-100 ${
-          isHovering ? "bg-cyan-400 scale-150" : isClicking ? "bg-violet-400 scale-200" : "bg-white"
-        }`}
+        className="magic-cursor-dot"
         style={{
-          boxShadow: "0 0 10px currentColor",
+          position: "fixed",
+          width: "8px",
+          height: "8px",
+          borderRadius: "50%",
+          backgroundColor: "white",
+          pointerEvents: "none",
+          zIndex: 99999,
+          transform: "translate(-50%, -50%)",
+          opacity: 0,
+          transition: "width 0.1s, height 0.1s, background-color 0.1s",
+          boxShadow: "0 0 10px rgba(255, 255, 255, 0.8)",
+          willChange: "left, top",
         }}
       />
 
-      {/* Hide default cursor */}
+      {/* Cursor styles */}
       <style jsx global>{`
         * {
           cursor: none !important;
+        }
+
+        .magic-cursor-ring.hovering {
+          width: 60px;
+          height: 60px;
+          border-color: rgba(34, 211, 238, 0.8);
+          background-color: rgba(34, 211, 238, 0.1);
+          box-shadow: 0 0 30px rgba(34, 211, 238, 0.4);
+        }
+
+        .magic-cursor-ring.clicking {
+          width: 30px;
+          height: 30px;
+          border-color: rgba(167, 139, 250, 0.9);
+          background-color: rgba(167, 139, 250, 0.2);
+        }
+
+        .magic-cursor-dot.hovering {
+          width: 12px;
+          height: 12px;
+          background-color: rgb(34, 211, 238);
+        }
+
+        .magic-cursor-dot.clicking {
+          width: 6px;
+          height: 6px;
+          background-color: rgb(167, 139, 250);
         }
       `}</style>
     </>

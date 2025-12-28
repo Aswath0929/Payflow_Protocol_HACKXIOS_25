@@ -661,6 +661,36 @@ yarn dev
 
 ---
 
+## 🤖 Expert AI Oracle v3.0 Integration
+
+### AI-Powered Fraud Detection
+
+In addition to oracle security, The Blocks integrates an **Expert AI Oracle** for real-time fraud detection:
+
+| Model | Weight | Purpose |
+|-------|--------|---------|
+| Neural Network | 25% | MLP + Autoencoder anomaly detection |
+| Typology Detector | 25% | 15+ fraud pattern rules |
+| Qwen3:8b LLM | 30% | GPT-4 level reasoning (100% local) |
+| Compliance Engine | 20% | FATF/OFAC regulatory checks |
+
+### Running the AI Oracle
+
+```bash
+# Start Ollama with Qwen3 (one-time setup)
+ollama pull qwen3:8b
+ollama serve
+
+# Start the Expert AI Oracle API
+cd packages/nextjs/services/ai
+python -m uvicorn expertAIOracle:app --host 0.0.0.0 --port 8000
+
+# Access AI Fraud Dashboard
+open http://localhost:3000/fraud
+```
+
+---
+
 ## 📄 License
 
 MIT License - see [LICENSE](LICENSE) for details.

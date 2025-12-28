@@ -7,7 +7,7 @@ import { sepolia } from "viem/chains";
 // Direct Sepolia client - bypasses wagmi's RPC routing
 const sepoliaClient = createPublicClient({
   chain: sepolia,
-  transport: http("https://eth-sepolia.g.alchemy.com/v2/cR4WnXePioePZ5fFrnSiR"),
+  transport: http("https://rpc.sepolia.org"),
 });
 
 const CHAINLINK_ETH = "0x694AA1769357215DE4FAC081bf1f309aDC325306";

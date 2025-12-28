@@ -22,11 +22,11 @@ const CONTRACTS = {
     description: "Cross-chain synchronized price feed",
     features: ["Multi-Chain", "Low Latency", "Aggregated Feed"],
   },
-  attackSim: {
-    name: "AttackSimulator",
+  securityDemo: {
+    name: "SecurityDemo",
     address: "0x5FFFeAf6B0b4d1685809959cA4B16E374827a8e2",
     description: "Security testing and demonstration",
-    features: ["Flash Loan Sim", "Manipulation Test", "Defense Demo"],
+    features: ["Flash Loan Guard", "Manipulation Defense", "BFT Consensus"],
   },
   chainlink: {
     name: "Chainlink ETH/USD",

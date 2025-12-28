@@ -150,7 +150,7 @@ const PYTH_ABI = [
 
 const publicClient = createPublicClient({
   chain: sepolia,
-  transport: http("https://eth-sepolia.g.alchemy.com/v2/demo"),
+  transport: http("https://rpc.sepolia.org"),
 });
 
 // ========================================
