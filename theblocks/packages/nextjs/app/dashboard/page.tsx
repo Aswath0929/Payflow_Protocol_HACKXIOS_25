@@ -6,6 +6,7 @@ import type { NextPage } from "next";
 import { createPublicClient, formatEther, http } from "viem";
 import { sepolia } from "viem/chains";
 import { useAccount, useBalance } from "wagmi";
+import { AIRiskPanel } from "~~/components/AIRiskPanel";
 import { RainbowKitCustomConnectButton } from "~~/components/scaffold-eth";
 import { StrikethroughFade } from "~~/components/ui/ComparisonReveal";
 import { ComplianceDemo, PaymentFlowDemo, SettlementSpeedDemo } from "~~/components/ui/LiveDemoWidget";
@@ -810,6 +811,34 @@ const Dashboard: NextPage = () => {
                 </div>
               </ScrollReveal>
             </div>
+
+            {/* Neural Risk Scan Demo */}
+            <ScrollReveal delay={700} direction="up">
+              <div className="mt-8">
+                <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
+                  <span className="text-2xl">🧠</span> Neural Risk Scan Demo
+                  <span className="text-xs bg-violet-500/20 text-violet-400 px-2 py-1 rounded-full ml-2">
+                    PayPal/Visa Track
+                  </span>
+                </h3>
+                <p className="text-zinc-400 text-sm mb-4">
+                  Real-time AI fraud detection with 4-model ensemble. Click &quot;Analyze&quot; to see the neural network in action.
+                </p>
+                <AIRiskPanel
+                  transaction={{
+                    sender: address || "0x742d35Cc6634C0532925a3b844Bc9e7595f",
+                    recipient: "0x8ba1f109551bD432803012645Ac136ddd64DBA72",
+                    amount: 50000,
+                    senderTxCount: 25,
+                    senderAvgAmount: 15000,
+                    senderTotalVolume: 375000,
+                  }}
+                  autoAnalyze={false}
+                  blockingThreshold={70}
+                  onBlock={(score: number) => console.log(`Transaction blocked with score: ${score}`)}
+                />
+              </div>
+            </ScrollReveal>
           </div>
         )}
 

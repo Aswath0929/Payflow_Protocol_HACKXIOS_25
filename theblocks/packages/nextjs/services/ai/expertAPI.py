@@ -709,6 +709,91 @@ async def run_demo_test_cases(background_tasks: BackgroundTasks) -> Dict:
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
+#                         AI CHATBOT ENDPOINT
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class ChatRequest(BaseModel):
+    """Request model for chat endpoint."""
+    message: str = Field(..., description="User message")
+    context: Optional[str] = Field(None, description="Additional context")
+    use_thinking: Optional[bool] = Field(False, description="Enable Qwen3 thinking mode")
+
+
+class ChatResponse(BaseModel):
+    """Response model for chat endpoint."""
+    response: str
+    latency_ms: float
+    model: str = "qwen3:8b"
+
+
+@app.post("/chat", tags=["AI Chatbot"])
+async def chat(request: ChatRequest) -> ChatResponse:
+    """
+    AI Chatbot endpoint for PayFlow Protocol support.
+    
+    Uses Qwen3:8B local LLM to answer questions about:
+    - PayFlow contracts and features
+    - Compliance tiers and limits
+    - Oracle system and pricing
+    - Fraud detection and risk analysis
+    - Transaction troubleshooting
+    
+    **100% Local - Your data never leaves your machine**
+    """
+    import httpx
+    
+    start_time = time.time()
+    
+    # Build prompt
+    system_context = request.context or ""
+    
+    prompt = f"""{system_context}
+
+USER: {request.message}
+
+ASSISTANT:"""
+    
+    try:
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            response = await client.post(
+                "http://localhost:11434/api/generate",
+                json={
+                    "model": "qwen3:8b",
+                    "prompt": prompt,
+                    "stream": False,
+                    "options": {
+                        "temperature": 0.7,
+                        "num_predict": 500,
+                    }
+                }
+            )
+            
+            if response.status_code != 200:
+                raise HTTPException(status_code=503, detail="LLM service unavailable")
+            
+            data = response.json()
+            llm_response = data.get("response", "")
+            
+            # Remove thinking tags if present
+            if not request.use_thinking:
+                import re
+                llm_response = re.sub(r'<think>[\s\S]*?</think>', '', llm_response).strip()
+            
+            latency = (time.time() - start_time) * 1000
+            
+            return ChatResponse(
+                response=llm_response,
+                latency_ms=round(latency, 2),
+                model="qwen3:8b"
+            )
+            
+    except httpx.TimeoutException:
+        raise HTTPException(status_code=504, detail="LLM request timed out")
+    except httpx.RequestError as e:
+        raise HTTPException(status_code=503, detail=f"LLM service error: {str(e)}")
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
 #                         MAIN ENTRY POINT
 # ═══════════════════════════════════════════════════════════════════════════════
 
