@@ -35,7 +35,13 @@ logger = logging.getLogger('LocalLLMAnalyzer')
 # ═══════════════════════════════════════════════════════════════════════════════
 
 class Qwen3Config:
-    """Configuration for Qwen3 local LLM."""
+    """
+    Configuration for Qwen3 local LLM.
+    
+    OPTIMIZED FOR RTX 4070 (8GB VRAM) DUAL WORKLOAD:
+    - Fraud Detection (high priority, fast)
+    - AI Chatbot (parallel, streaming)
+    """
     
     # Ollama server URL (default local)
     OLLAMA_URL = "http://localhost:11434"
@@ -47,15 +53,40 @@ class Qwen3Config:
     # - qwen3:1.7b   → ~1.5GB VRAM (fastest, lighter analysis)
     MODEL_NAME = "qwen3:8b"
     
-    # Inference settings
-    TEMPERATURE = 0.3  # Low for consistent fraud analysis
-    TOP_P = 0.9
-    MAX_TOKENS = 512
-    TIMEOUT = 30.0  # seconds
+    # ═══════════════════════════════════════════════════════════════════
+    #                    GPU ACCELERATION SETTINGS (RTX 4070)
+    # ═══════════════════════════════════════════════════════════════════
+    # Maximum GPU utilization for fraud detection
+    NUM_GPU = 99              # Offload ALL layers to GPU (max speed)
+    NUM_CTX = 4096            # Context window (optimized for 8GB VRAM)
+    NUM_BATCH = 512           # Batch size for prompt processing
+    NUM_THREAD = 8            # CPU threads for non-GPU operations
+    USE_MMAP = True           # Memory-mapped loading (faster startup)
+    USE_MLOCK = False         # Don't lock in RAM, prefer GPU VRAM
     
-    # Retry settings
+    # ═══════════════════════════════════════════════════════════════════
+    #                    INFERENCE OPTIMIZATION
+    # ═══════════════════════════════════════════════════════════════════
+    TEMPERATURE = 0.3         # Low for consistent fraud analysis
+    TOP_P = 0.9
+    TOP_K = 40                # Limit token sampling (faster)
+    MAX_TOKENS = 512          # Fraud responses are concise
+    REPEAT_PENALTY = 1.1      # Prevent repetition
+    MIROSTAT = 0              # Disabled for speed
+    
+    # ═══════════════════════════════════════════════════════════════════
+    #                    TIMEOUT & RETRY SETTINGS
+    # ═══════════════════════════════════════════════════════════════════
+    TIMEOUT = 30.0            # seconds (fraud detection timeout)
+    CONNECT_TIMEOUT = 5.0     # Connection timeout
     MAX_RETRIES = 3
-    RETRY_DELAY = 1.0
+    RETRY_DELAY = 0.5         # Faster retry for real-time
+    
+    # ═══════════════════════════════════════════════════════════════════
+    #                    PARALLEL WORKLOAD SETTINGS
+    # ═══════════════════════════════════════════════════════════════════
+    KEEP_ALIVE = "30m"        # Keep model in VRAM for 30 minutes
+    PRIORITY = 10             # Higher priority than chatbot (5)
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #                              DATA CLASSES
@@ -163,19 +194,25 @@ Be precise and cite specific patterns. Respond ONLY with JSON, no other text."""
             return False
     
     async def warm_up(self) -> bool:
-        """Warm up the model by loading it into GPU memory."""
+        """Warm up the model by loading it into GPU memory with optimized settings."""
         try:
-            logger.info("Warming up Qwen3 model (loading to GPU)...")
+            logger.info("Warming up Qwen3 model (loading to GPU with CUDA acceleration)...")
             start = time.time()
             
-            # Send a simple prompt to load the model
+            # Send a simple prompt to load the model with GPU-optimized settings
             response = await self.client.post(
                 f"{self.ollama_url}/api/generate",
                 json={
                     "model": self.model_name,
                     "prompt": "Hello",
                     "stream": False,
+                    "keep_alive": Qwen3Config.KEEP_ALIVE,
                     "options": {
+                        # GPU Acceleration (RTX 4070)
+                        "num_gpu": Qwen3Config.NUM_GPU,
+                        "num_ctx": Qwen3Config.NUM_CTX,
+                        "num_batch": Qwen3Config.NUM_BATCH,
+                        "use_mmap": Qwen3Config.USE_MMAP,
                         "num_predict": 1
                     }
                 },
@@ -301,10 +338,23 @@ Respond with JSON only:"""
                         "prompt": prompt,
                         "stream": False,
                         "format": "json",
+                        "keep_alive": Qwen3Config.KEEP_ALIVE,
                         "options": {
+                            # GPU Acceleration (RTX 4070)
+                            "num_gpu": Qwen3Config.NUM_GPU,
+                            "num_thread": Qwen3Config.NUM_THREAD,
+                            "num_ctx": Qwen3Config.NUM_CTX,
+                            "num_batch": Qwen3Config.NUM_BATCH,
+                            "use_mmap": Qwen3Config.USE_MMAP,
+                            "use_mlock": Qwen3Config.USE_MLOCK,
+                            
+                            # Inference settings
                             "temperature": Qwen3Config.TEMPERATURE,
                             "top_p": Qwen3Config.TOP_P,
+                            "top_k": Qwen3Config.TOP_K,
                             "num_predict": Qwen3Config.MAX_TOKENS,
+                            "repeat_penalty": Qwen3Config.REPEAT_PENALTY,
+                            "mirostat": Qwen3Config.MIROSTAT,
                         }
                     },
                     timeout=Qwen3Config.TIMEOUT

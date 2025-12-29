@@ -58,6 +58,42 @@ import math
 from collections import deque
 
 # ═══════════════════════════════════════════════════════════════════════════════
+#                              GPU ACCELERATION (RTX 4070)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# Try to use CuPy for GPU acceleration
+USE_CUPY = False
+xp = np  # Default to NumPy
+
+try:
+    import cupy as cp
+    # Verify CUDA is available
+    try:
+        _ = cp.cuda.Device(0).compute_capability
+        xp = cp
+        USE_CUPY = True
+        print(f"🚀 GPU Acceleration ENABLED: {cp.cuda.Device(0).name}")
+    except cp.cuda.runtime.CUDARuntimeError:
+        print("⚠️ CuPy installed but CUDA unavailable, using NumPy")
+except ImportError:
+    print("📦 CuPy not installed, using NumPy (install with: pip install cupy-cuda12x)")
+
+
+def to_device(arr):
+    """Transfer array to GPU if available."""
+    if USE_CUPY and isinstance(arr, np.ndarray):
+        return cp.asarray(arr)
+    return arr
+
+
+def to_cpu(arr):
+    """Transfer array back to CPU."""
+    if USE_CUPY and hasattr(arr, 'get'):
+        return arr.get()
+    return arr
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
 #                              MODEL CACHE CONFIG
 # ═══════════════════════════════════════════════════════════════════════════════
 
@@ -146,32 +182,33 @@ class ExpertPrediction:
 #                              ACTIVATION FUNCTIONS
 # ═══════════════════════════════════════════════════════════════════════════════
 
-def relu(x: np.ndarray) -> np.ndarray:
-    """ReLU activation."""
-    return np.maximum(0, x)
+def relu(x):
+    """ReLU activation (GPU-accelerated if available)."""
+    return xp.maximum(0, x)
 
-def leaky_relu(x: np.ndarray, alpha: float = 0.01) -> np.ndarray:
-    """Leaky ReLU activation."""
-    return np.where(x > 0, x, alpha * x)
+def leaky_relu(x, alpha: float = 0.01):
+    """Leaky ReLU activation (GPU-accelerated if available)."""
+    return xp.where(x > 0, x, alpha * x)
 
-def sigmoid(x: np.ndarray) -> np.ndarray:
-    """Sigmoid activation with numerical stability."""
-    return np.where(x >= 0, 
-                    1 / (1 + np.exp(-np.clip(x, -500, 500))),
-                    np.exp(np.clip(x, -500, 500)) / (1 + np.exp(np.clip(x, -500, 500))))
+def sigmoid(x):
+    """Sigmoid activation with numerical stability (GPU-accelerated)."""
+    x_clipped = xp.clip(x, -500, 500)
+    return xp.where(x >= 0, 
+                    1 / (1 + xp.exp(-x_clipped)),
+                    xp.exp(x_clipped) / (1 + xp.exp(x_clipped)))
 
-def tanh(x: np.ndarray) -> np.ndarray:
-    """Tanh activation."""
-    return np.tanh(np.clip(x, -500, 500))
+def tanh(x):
+    """Tanh activation (GPU-accelerated)."""
+    return xp.tanh(xp.clip(x, -500, 500))
 
-def softmax(x: np.ndarray) -> np.ndarray:
-    """Softmax activation with numerical stability."""
-    exp_x = np.exp(x - np.max(x))
-    return exp_x / (np.sum(exp_x) + 1e-10)
+def softmax(x):
+    """Softmax activation with numerical stability (GPU-accelerated)."""
+    exp_x = xp.exp(x - xp.max(x))
+    return exp_x / (xp.sum(exp_x) + 1e-10)
 
-def gelu(x: np.ndarray) -> np.ndarray:
-    """GELU activation (used in transformers)."""
-    return 0.5 * x * (1 + np.tanh(np.sqrt(2 / np.pi) * (x + 0.044715 * x**3)))
+def gelu(x):
+    """GELU activation (used in transformers, GPU-accelerated)."""
+    return 0.5 * x * (1 + xp.tanh(xp.sqrt(2 / xp.pi) * (x + 0.044715 * x**3)))
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -223,23 +260,32 @@ class DeepMLP:
             self.running_mean[layer_idx] = 0.9 * self.running_mean[layer_idx] + 0.1 * mean
             self.running_var[layer_idx] = 0.9 * self.running_var[layer_idx] + 0.1 * var
         else:
-            mean = np.mean(self.running_mean[layer_idx])
-            var = np.mean(self.running_var[layer_idx]) + eps
+            mean = xp.mean(self.running_mean[layer_idx])
+            var = xp.mean(self.running_var[layer_idx]) + eps
         
-        return (x - mean) / np.sqrt(var)
+        return (x - mean) / xp.sqrt(var)
     
     def forward(self, x: np.ndarray) -> float:
-        """Forward pass through the network."""
-        h = x.astype(np.float64)
+        """
+        Forward pass through the network.
+        GPU-accelerated if CuPy is available (RTX 4070).
+        """
+        # Transfer to GPU if available
+        h = to_device(x.astype(np.float64))
+        weights = [to_device(w) for w in self.weights] if USE_CUPY else self.weights
+        biases = [to_device(b) for b in self.biases] if USE_CUPY else self.biases
         
-        for i in range(len(self.weights) - 1):
-            h = np.dot(h, self.weights[i]) + self.biases[i]
+        for i in range(len(weights) - 1):
+            h = xp.dot(h, weights[i]) + biases[i]
             h = self._batch_norm(h, i)
             h = gelu(h)  # Modern activation
         
         # Output layer
-        output = np.dot(h, self.weights[-1]) + self.biases[-1]
+        output = xp.dot(h, weights[-1]) + biases[-1]
         score = sigmoid(output)[0] * 100  # Scale to 0-100
+        
+        # Transfer back to CPU
+        score = to_cpu(score)
         
         return float(np.clip(score, 0, 100))
     
@@ -683,6 +729,13 @@ class ExpertNeuralEnsemble:
     def __init__(self, seed: int = 42, use_cache: bool = True):
         np.random.seed(seed)
         
+        # Log GPU status
+        if USE_CUPY:
+            import cupy as cp
+            print(f"  🚀 ExpertNeuralEnsemble using GPU: {cp.cuda.Device(0).name}")
+        else:
+            print("  💻 ExpertNeuralEnsemble using CPU (NumPy)")
+        
         # Initialize models
         self.deep_mlp = DeepMLP(input_dim=34, seed=seed)
         self.gradient_boost = GradientBoostedModel(n_estimators=50, seed=seed)
@@ -699,6 +752,7 @@ class ExpertNeuralEnsemble:
         self.trained = False
         self.use_cache = use_cache
         self._seed = seed
+        self.use_gpu = USE_CUPY
     
     def save_to_cache(self) -> bool:
         """Save trained model weights to disk cache."""
