@@ -8,7 +8,7 @@ import { AppProgressBar as ProgressBar } from "next-nprogress-bar";
 import { useTheme } from "next-themes";
 import { Toaster } from "react-hot-toast";
 import { WagmiProvider } from "wagmi";
-import { AIChatbot } from "~~/components/AIChatbot";
+import { AIChatbotPro } from "~~/components/AIChatbotPro";
 import { Footer } from "~~/components/Footer";
 import { Header } from "~~/components/Header";
 import { BlockieAvatar } from "~~/components/scaffold-eth";
@@ -56,9 +56,9 @@ const ScaffoldEthApp = ({ children }: { children: React.ReactNode }) => {
           },
         }}
       />
-      
-      {/* AI Chatbot - Floating Support Agent */}
-      <AIChatbot />
+
+      {/* AI Chatbot Pro - Enterprise-Grade Support Agent */}
+      <AIChatbotPro />
     </>
   );
 };
