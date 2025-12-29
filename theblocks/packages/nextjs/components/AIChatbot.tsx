@@ -63,39 +63,58 @@ interface ChatbotProps {
 // PROTOCOL KNOWLEDGE BASE
 // ═══════════════════════════════════════════════════════════════════════════
 
-const PROTOCOL_CONTEXT = `You are PayFlow AI Assistant, an expert on the PayFlow Protocol for cross-border stablecoin payments.
+const PROTOCOL_CONTEXT = `You are PayFlow AI Assistant, a SPECIALIZED expert ONLY on the PayFlow Protocol.
 
-KEY PROTOCOL KNOWLEDGE:
+⚠️ CRITICAL RULES - YOU MUST FOLLOW THESE:
+1. You ONLY answer questions about PayFlow Protocol and its features
+2. If a question is NOT related to PayFlow (e.g., general coding, weather, news, other topics), respond with:
+   "I'm PayFlow AI Assistant, specialized in helping you understand and use PayFlow Protocol. I can help you with payments, compliance, escrow, oracles, and fraud detection. What would you like to know about PayFlow?"
+3. Do NOT answer general knowledge questions, coding help unrelated to PayFlow, or any off-topic queries
+4. Always guide users back to PayFlow features
 
-1. **PayFlow Core Contracts**:
-   - PayFlowCore.sol: Main payment engine with createPayment(), executePayment(), settleWithFX()
-   - ComplianceEngine.sol: 5-tier KYC (NONE→BASIC→STANDARD→ENHANCED→INSTITUTIONAL)
+PAYFLOW PROTOCOL KNOWLEDGE BASE:
+
+1. **Core Smart Contracts**:
+   - PayFlowCore.sol: createPayment(), executePayment(), settleWithFX(), cancelPayment()
+   - ComplianceEngine.sol: 5-tier KYC system with setUserTier(), checkCompliance()
    - SmartEscrow.sol: 4 release types (TIME_BASED, APPROVAL, ORACLE, MULTI_SIG)
-   - OracleAggregator.sol: Chainlink (60%) + Pyth (40%) weighted consensus
-   - AuditRegistry.sol: Immutable compliance logging
-   - FraudOracle.sol: AI-powered risk scoring (0-100)
+   - OracleAggregator.sol: Chainlink (60%) + Pyth (40%) weighted price consensus
+   - AuditRegistry.sol: Immutable compliance logging for regulators
+   - FraudOracle.sol: AI-powered risk scoring with on-chain verification
    - PayFlowPaymaster.sol: ERC-4337 gasless transactions
 
 2. **Compliance Tiers & Limits**:
-   - NONE: $1K/day, $5K/month
-   - BASIC: $10K/day, $50K/month (email+phone)
-   - STANDARD: $100K/day, $500K/month (gov ID)
-   - ENHANCED: $1M/day, $5M/month (full KYC+AML)
-   - INSTITUTIONAL: Unlimited (corporate KYC+UBO)
+   - NONE (Tier 0): $1K/day, $5K/month - No verification needed
+   - BASIC (Tier 1): $10K/day, $50K/month - Email + phone verification
+   - STANDARD (Tier 2): $100K/day, $500K/month - Government ID required
+   - ENHANCED (Tier 3): $1M/day, $5M/month - Full KYC + AML screening
+   - INSTITUTIONAL (Tier 4): Unlimited - Corporate KYC + UBO verification
 
-3. **AI Fraud Detection**:
-   - 4-Model Ensemble: Neural Network (25%) + Typology Detector (25%) + Qwen3 LLM (30%) + Compliance (20%)
-   - 15 Fraud Typologies: Mixing, Layering, Wash Trading, Structuring, Flash Loans, etc.
+3. **AI Fraud Detection System**:
+   - 4-Model Ensemble: Neural Network (25%) + Typology Detector (25%) + Qwen3 LLM (30%) + Compliance Engine (20%)
+   - 15 Fraud Typologies: Mixing, Layering, Wash Trading, Structuring, Flash Loans, Sybil Attacks, etc.
    - Risk Levels: SAFE (0-20), LOW (21-40), MEDIUM (41-60), HIGH (61-80), CRITICAL (81-100)
+   - All verdicts are ECDSA-signed for on-chain verification
 
-4. **Gasless Transactions (Visa-Style)**:
-   - Users don't need ETH for gas
-   - 0.1% fee deduction from stablecoin OR sponsor-subsidized
-   - Rate limit: 100 tx/hour per user
+4. **Gasless Transactions (ERC-4337)**:
+   - Users send stablecoins without holding ETH
+   - 0.1% fee deduction from transfer amount OR sponsor-subsidized
+   - Rate limit: 100 transactions per hour per user
+   - Corporate sponsors can whitelist employees for free transactions
 
-5. **Supported Tokens**: PYUSD (PayPal), USDC (Circle), DAI, USDT
+5. **Supported Stablecoins**:
+   - PYUSD (PayPal USD) - Primary integration
+   - USDC (Circle)
+   - DAI (MakerDAO)
+   - USDT (Tether)
 
-Be helpful, concise, and always reference specific contract functions when applicable.`;
+6. **Smart Escrow Release Types**:
+   - TIME_BASED: Automatic release after deadline
+   - APPROVAL: Manual approval by designated party
+   - ORACLE: Release triggered by price oracle condition
+   - MULTI_SIG: Requires multiple signatures to release
+
+Remember: ONLY answer PayFlow-related questions. Politely redirect off-topic queries.`;
 
 // ═══════════════════════════════════════════════════════════════════════════
 // MAIN COMPONENT
@@ -239,10 +258,109 @@ What would you like to know?`,
   };
 
   // ═══════════════════════════════════════════════════════════════════════
+  // TOPIC VALIDATION - Ensures queries are PayFlow-related
+  // ═══════════════════════════════════════════════════════════════════════
+
+  const PAYFLOW_KEYWORDS = [
+    // Core concepts
+    "payflow",
+    "payment",
+    "transfer",
+    "send",
+    "receive",
+    "transaction",
+    "tx",
+    // Contracts
+    "contract",
+    "escrow",
+    "oracle",
+    "compliance",
+    "kyc",
+    "audit",
+    "paymaster",
+    // Tokens
+    "pyusd",
+    "usdc",
+    "dai",
+    "usdt",
+    "stablecoin",
+    "token",
+    "erc20",
+    // Features
+    "gasless",
+    "gas",
+    "fee",
+    "sponsor",
+    "whitelist",
+    "tier",
+    "limit",
+    // Fraud/Risk
+    "fraud",
+    "risk",
+    "score",
+    "block",
+    "approve",
+    "review",
+    "typology",
+    // Technical
+    "wallet",
+    "address",
+    "deploy",
+    "sepolia",
+    "mainnet",
+    "chain",
+    // Actions
+    "create",
+    "execute",
+    "cancel",
+    "settle",
+    "release",
+    "lock",
+    // Questions about platform
+    "how",
+    "what",
+    "why",
+    "when",
+    "where",
+    "can i",
+    "help",
+    "explain",
+    "tell me",
+  ];
+
+  const isPayFlowRelated = (query: string): boolean => {
+    const lowerQuery = query.toLowerCase();
+    // Check if any PayFlow keyword is present
+    return (
+      PAYFLOW_KEYWORDS.some(keyword => lowerQuery.includes(keyword)) ||
+      // Also allow greetings and basic questions
+      lowerQuery.length < 20 ||
+      /^(hi|hello|hey|thanks|thank you|ok|okay|yes|no|sure)/.test(lowerQuery)
+    );
+  };
+
+  const OFF_TOPIC_RESPONSE = `I'm **PayFlow AI Assistant**, specialized exclusively in helping you understand and use the PayFlow Protocol.
+
+I can help you with:
+• 💸 **Payments** - Creating, executing, and tracking transfers
+• 🛡️ **Compliance** - KYC tiers, limits, and verification
+• 🔒 **Smart Escrow** - Conditional payment setups
+• 🔮 **Oracles** - Price feeds and FX rates
+• 🧠 **Fraud Detection** - Risk scores and typologies
+• ⛽ **Gasless Transfers** - Send without ETH
+
+What would you like to know about PayFlow?`;
+
+  // ═══════════════════════════════════════════════════════════════════════
   // LOCAL LLM CALL
   // ═══════════════════════════════════════════════════════════════════════
 
   const callLocalLLM = async (userInput: string): Promise<string> => {
+    // Client-side topic filter - catch obvious off-topic queries
+    if (!isPayFlowRelated(userInput)) {
+      return OFF_TOPIC_RESPONSE;
+    }
+
     // Build context with current state
     const contextInfo = [];
     if (walletAddress) {
@@ -254,9 +372,14 @@ What would you like to know?`,
 
     const fullPrompt = `${PROTOCOL_CONTEXT}
 
-${contextInfo.length > 0 ? `CURRENT CONTEXT:\n${contextInfo.join("\n")}\n\n` : ""}USER QUESTION: ${userInput}
+${contextInfo.length > 0 ? `CURRENT USER CONTEXT:\n${contextInfo.join("\n")}\n\n` : ""}USER QUESTION: ${userInput}
 
-Provide a helpful, concise response. Use markdown formatting. Reference specific PayFlow features when relevant.`;
+RESPONSE GUIDELINES:
+- If this question is about PayFlow Protocol, answer helpfully with specific details
+- If this question is NOT about PayFlow (e.g., general knowledge, other topics), politely redirect to PayFlow features
+- Use markdown formatting for clarity
+- Reference specific contract functions when applicable
+- Keep responses concise but informative`;
 
     // Try Expert AI Oracle first
     try {
