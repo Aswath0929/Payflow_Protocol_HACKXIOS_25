@@ -1030,6 +1030,6 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 ## 🌐 Additional Demo Links
 
-- [Live Demo (Vercel)](https://nextjs-h5z1dched-sandys-projects-65d29ae3.vercel.app/) - Hosted on Vercel
+- [Live Demo (Vercel)](https://nextjs-theta-three-9ywxp98mh4.vercel.app/) - Hosted on Vercel
 
 </div>
