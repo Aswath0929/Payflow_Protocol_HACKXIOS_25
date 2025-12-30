@@ -1032,4 +1032,6 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 - [Live Demo (Vercel)](https://nextjs-theta-three-9ywxp98mh4.vercel.app/) - Hosted on Vercel
 
+Notion documentation - https://www.notion.so/PayFlow-Protocol-Hackxios-2K25-84b481c228804e40bd9ad67abd760d0a
+
 </div>
