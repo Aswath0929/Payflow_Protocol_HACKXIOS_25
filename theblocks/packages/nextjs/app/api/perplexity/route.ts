@@ -15,7 +15,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Invalid JSON in request body" }, { status: 400 });
     }
     
-    const apiKey = "REPLACE_WITH_ENV";
+    const apiKey = "process.env.PERPLEXITY_API_KEY";
 
     const response = await fetch("https://api.perplexity.ai/chat/completions", {
       method: "POST",
@@ -51,3 +51,4 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }
+

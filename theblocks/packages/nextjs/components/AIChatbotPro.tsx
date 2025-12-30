@@ -161,7 +161,7 @@ declare global {
 // GEMINI API CONFIGURATION
 // ═══════════════════════════════════════════════════════════════════════════════
 
-const GEMINI_API_KEY = "REPLACE_WITH_ENV";
+const GEMINI_API_KEY = "REPLACE_WITH_ENV_VAR";
 const geminiService = new GeminiService(GEMINI_API_KEY);
 
 // Topic validation keywords
@@ -1449,3 +1449,4 @@ What would you like to know about PayFlow?`,
 };
 
 export default AIChatbotPro;
+
