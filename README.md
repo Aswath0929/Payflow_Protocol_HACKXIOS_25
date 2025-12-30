@@ -1026,4 +1026,10 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 **Built for the $320 trillion future of payments**
 
+---
+
+## 🌐 Additional Demo Links
+
+- [Live Demo (Vercel)](https://nextjs-h5z1dched-sandys-projects-65d29ae3.vercel.app/) - Hosted on Vercel
+
 </div>
