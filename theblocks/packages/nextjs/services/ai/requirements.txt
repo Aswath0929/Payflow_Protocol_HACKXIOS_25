@@ -38,11 +38,11 @@ web3>=6.11.0
 eth-account>=0.10.0
 
 # ═══════════════════════════════════════════════════════════════════════════════
-#                         OPTIONAL - ADVANCED AI
+#                         OPTIONAL - CLOUD AI FALLBACK
 # ═══════════════════════════════════════════════════════════════════════════════
 
-# OpenAI (for GPT-4 integration)
-# Uncomment if using GPT-4 analysis
+# OpenAI (optional fallback when Qwen3 MoE is unavailable)
+# Primary AI is Qwen3 MoE via Ollama - 100% local
 # openai>=1.6.0
 
 # ═══════════════════════════════════════════════════════════════════════════════

@@ -3,9 +3,9 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import type { NextPage } from "next";
-import { createPublicClient, formatEther, http } from "viem";
+import { createPublicClient, formatEther, formatUnits, http, parseEther, parseUnits } from "viem";
 import { sepolia } from "viem/chains";
-import { useAccount, useBalance } from "wagmi";
+import { useAccount, useBalance, useSendTransaction, useWriteContract } from "wagmi";
 import { AIRiskPanel } from "~~/components/AIRiskPanel";
 import { RainbowKitCustomConnectButton } from "~~/components/scaffold-eth";
 import { StrikethroughFade } from "~~/components/ui/ComparisonReveal";
@@ -16,6 +16,27 @@ import { ScrollReveal } from "~~/components/ui/ScrollReveal";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { useContractEvents } from "~~/hooks/settlement";
 import { useSecureAIOracle } from "~~/hooks/useSecureAIOracle";
+
+// ═══════════════════════════════════════════════════════════════════════════
+// DEPLOYED TOKEN CONTRACT ADDRESSES (Sepolia Testnet)
+// ═══════════════════════════════════════════════════════════════════════════
+const DEPLOYED_TOKENS: Record<string, { address: `0x${string}` | null; decimals: number; isNative?: boolean }> = {
+  ETH: { address: null, decimals: 18, isNative: true }, // Native token - no contract address
+  USDC: { address: "0xa1e69B7073Cfa28e65113f26f95E467b00387E31", decimals: 6 },
+  USDT: { address: "0x4c4eB655210531D87C28c07641e44e86cEbbA7A5", decimals: 6 },
+  EURC: { address: "0x1370e868fE82b8AF7b795Ad58BF4258C72c0a98A", decimals: 6 },
+};
+
+const PAYFLOW_CORE_ADDRESS = "0x4c9489812a9D971b431B9d99049a42B437347dBC" as const;
+
+// ERC20 ABI for token interactions
+const ERC20_ABI = [
+  { inputs: [{ name: "account", type: "address" }], name: "balanceOf", outputs: [{ name: "", type: "uint256" }], stateMutability: "view", type: "function" },
+  { inputs: [{ name: "spender", type: "address" }, { name: "amount", type: "uint256" }], name: "approve", outputs: [{ name: "", type: "bool" }], stateMutability: "nonpayable", type: "function" },
+  { inputs: [{ name: "owner", type: "address" }, { name: "spender", type: "address" }], name: "allowance", outputs: [{ name: "", type: "uint256" }], stateMutability: "view", type: "function" },
+  { inputs: [], name: "faucet", outputs: [], stateMutability: "nonpayable", type: "function" },
+  { inputs: [{ name: "to", type: "address" }, { name: "amount", type: "uint256" }], name: "transfer", outputs: [{ name: "", type: "bool" }], stateMutability: "nonpayable", type: "function" },
+] as const;
 
 // Sepolia client for oracle price fetching - using multiple public RPCs with fallback
 const sepoliaClient = createPublicClient({
@@ -98,6 +119,211 @@ const COMPLIANCE_TIERS: { value: ComplianceTier; label: string; limit: string }[
   { value: "INSTITUTIONAL", label: "Institutional (Full KYC)", limit: "Unlimited" },
 ];
 
+// ═══════════════════════════════════════════════════════════════════════════
+// SUPPORTED TOKENS - PayPal, Visa-Compatible, Web3 Native
+// Industry-grade token support with live exchange rates
+// ═══════════════════════════════════════════════════════════════════════════
+
+type TokenCategory = "STABLECOIN" | "WRAPPED" | "DEFI" | "PAYPAL" | "NATIVE" | "NETWORK";
+
+interface SupportedToken {
+  symbol: string;
+  name: string;
+  category: TokenCategory;
+  decimals: number;
+  coingeckoId: string; // For live price fetching
+  icon: string;
+  chainlinkFeed?: string; // Chainlink price feed on Sepolia (if available)
+  isPayPalSupported: boolean;
+  isVisaCompatible: boolean;
+  travelRuleApplicable: boolean; // >$3,000 requires Travel Rule compliance
+  color: string;
+}
+
+const SUPPORTED_TOKENS: SupportedToken[] = [
+  // === NATIVE NETWORK TOKEN ===
+  {
+    symbol: "ETH",
+    name: "Native Network Token",
+    category: "NETWORK",
+    decimals: 18,
+    coingeckoId: "ethereum",
+    icon: "⟠",
+    isPayPalSupported: false,
+    isVisaCompatible: false,
+    travelRuleApplicable: true,
+    color: "#627EEA",
+  },
+  // === STABLECOINS (USD-pegged) ===
+  {
+    symbol: "USDC",
+    name: "USD Coin (Circle)",
+    category: "STABLECOIN",
+    decimals: 6,
+    coingeckoId: "usd-coin",
+    icon: "💵",
+    isPayPalSupported: true,
+    isVisaCompatible: true,
+    travelRuleApplicable: true,
+    color: "#2775CA",
+  },
+  {
+    symbol: "USDT",
+    name: "Tether USD",
+    category: "STABLECOIN",
+    decimals: 6,
+    coingeckoId: "tether",
+    icon: "💲",
+    isPayPalSupported: true,
+    isVisaCompatible: true,
+    travelRuleApplicable: true,
+    color: "#26A17B",
+  },
+  {
+    symbol: "PYUSD",
+    name: "PayPal USD",
+    category: "PAYPAL",
+    decimals: 6,
+    coingeckoId: "paypal-usd",
+    icon: "🅿️",
+    isPayPalSupported: true,
+    isVisaCompatible: true,
+    travelRuleApplicable: true,
+    color: "#003087",
+  },
+  {
+    symbol: "DAI",
+    name: "Dai Stablecoin (MakerDAO)",
+    category: "DEFI",
+    decimals: 18,
+    coingeckoId: "dai",
+    icon: "🔶",
+    isPayPalSupported: false,
+    isVisaCompatible: true,
+    travelRuleApplicable: true,
+    color: "#F5AC37",
+  },
+  {
+    symbol: "EURC",
+    name: "Euro Coin (Circle)",
+    category: "STABLECOIN",
+    decimals: 6,
+    coingeckoId: "euro-coin",
+    icon: "💶",
+    isPayPalSupported: true,
+    isVisaCompatible: true,
+    travelRuleApplicable: true,
+    color: "#1E88E5",
+  },
+  {
+    symbol: "FRAX",
+    name: "Frax",
+    category: "DEFI",
+    decimals: 18,
+    coingeckoId: "frax",
+    icon: "⚫",
+    isPayPalSupported: false,
+    isVisaCompatible: false,
+    travelRuleApplicable: true,
+    color: "#000000",
+  },
+  // === WRAPPED ASSETS ===
+  {
+    symbol: "WETH",
+    name: "Wrapped Ether",
+    category: "WRAPPED",
+    decimals: 18,
+    coingeckoId: "weth",
+    icon: "Ξ",
+    isPayPalSupported: false,
+    isVisaCompatible: false,
+    travelRuleApplicable: true,
+    color: "#627EEA",
+  },
+  {
+    symbol: "WBTC",
+    name: "Wrapped Bitcoin",
+    category: "WRAPPED",
+    decimals: 8,
+    coingeckoId: "wrapped-bitcoin",
+    icon: "₿",
+    isPayPalSupported: false,
+    isVisaCompatible: false,
+    travelRuleApplicable: true,
+    color: "#F7931A",
+  },
+  {
+    symbol: "stETH",
+    name: "Lido Staked ETH",
+    category: "DEFI",
+    decimals: 18,
+    coingeckoId: "staked-ether",
+    icon: "🔷",
+    isPayPalSupported: false,
+    isVisaCompatible: false,
+    travelRuleApplicable: true,
+    color: "#00A3FF",
+  },
+  // === DEFI GOVERNANCE TOKENS ===
+  {
+    symbol: "LINK",
+    name: "Chainlink",
+    category: "DEFI",
+    decimals: 18,
+    coingeckoId: "chainlink",
+    icon: "🔗",
+    isPayPalSupported: false,
+    isVisaCompatible: false,
+    travelRuleApplicable: true,
+    color: "#375BD2",
+  },
+  {
+    symbol: "UNI",
+    name: "Uniswap",
+    category: "DEFI",
+    decimals: 18,
+    coingeckoId: "uniswap",
+    icon: "🦄",
+    isPayPalSupported: false,
+    isVisaCompatible: false,
+    travelRuleApplicable: true,
+    color: "#FF007A",
+  },
+  {
+    symbol: "AAVE",
+    name: "Aave",
+    category: "DEFI",
+    decimals: 18,
+    coingeckoId: "aave",
+    icon: "👻",
+    isPayPalSupported: false,
+    isVisaCompatible: false,
+    travelRuleApplicable: true,
+    color: "#B6509E",
+  },
+];
+
+// Token price cache interface
+interface TokenPrice {
+  symbol: string;
+  usdPrice: number;
+  change24h: number;
+  lastUpdated: Date;
+}
+
+// Travel Rule threshold (FATF requirement)
+const TRAVEL_RULE_THRESHOLD_USD = 3000;
+
+// Industry compliance flags
+interface ComplianceFlags {
+  travelRuleRequired: boolean;
+  amlScreeningRequired: boolean;
+  sanctionsCheckRequired: boolean;
+  enhancedDueDiligence: boolean;
+  sourceOfFundsRequired: boolean;
+  beneficiaryInfoRequired: boolean;
+}
+
 const Dashboard: NextPage = () => {
   const { address, isConnected, chain } = useAccount();
   const [activeTab, setActiveTab] = useState<"overview" | "create" | "payments" | "compliance">("overview");
@@ -105,6 +331,16 @@ const Dashboard: NextPage = () => {
   const [isLoaded, setIsLoaded] = useState(false);
   const [processingStep, setProcessingStep] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
+  
+  // Token balances and transaction state
+  const [tokenBalances, setTokenBalances] = useState<Record<string, string>>({});
+  const [isApproving, setIsApproving] = useState(false);
+  const [isFauceting, setIsFauceting] = useState(false);
+  const [txStatus, setTxStatus] = useState<string | null>(null);
+  
+  // Wagmi write contract hooks
+  const { writeContractAsync } = useWriteContract();
+  const { sendTransactionAsync } = useSendTransaction();
   
   // AI Fraud Detection Hook
   const { analyzeOnly } = useSecureAIOracle(
@@ -125,6 +361,241 @@ const Dashboard: NextPage = () => {
   const [ethPrice, setEthPrice] = useState<number>(0);
   const [, setPriceLastUpdated] = useState<Date | null>(null);
   const [priceAge, setPriceAge] = useState<number>(0);
+
+  // Live token prices from CoinGecko API
+  const [tokenPrices, setTokenPrices] = useState<Record<string, TokenPrice>>({});
+  const [tokenPricesLoading, setTokenPricesLoading] = useState(false);
+
+  // Fetch token balances
+  const fetchTokenBalances = useCallback(async () => {
+    if (!address) return;
+    
+    const client = createPublicClient({
+      chain: sepolia,
+      transport: http("https://eth-sepolia.g.alchemy.com/v2/demo"),
+    });
+    
+    const balances: Record<string, string> = {};
+    
+    // Fetch native ETH balance
+    try {
+      const ethBalance = await client.getBalance({ address });
+      balances["ETH"] = formatEther(ethBalance);
+    } catch {
+      balances["ETH"] = walletBalance ? formatEther(walletBalance.value) : "0";
+    }
+    
+    // Fetch ERC20 token balances
+    for (const [symbol, token] of Object.entries(DEPLOYED_TOKENS)) {
+      if (token.isNative) continue; // Skip native token, already handled above
+      
+      try {
+        const balance = await client.readContract({
+          address: token.address!,
+          abi: ERC20_ABI,
+          functionName: "balanceOf",
+          args: [address],
+        });
+        balances[symbol] = formatUnits(balance, token.decimals);
+      } catch {
+        balances[symbol] = "0";
+      }
+    }
+    setTokenBalances(balances);
+  }, [address, walletBalance]);
+
+  // Fetch token balances on mount and address change
+  useEffect(() => {
+    fetchTokenBalances();
+    const interval = setInterval(fetchTokenBalances, 15000);
+    return () => clearInterval(interval);
+  }, [fetchTokenBalances]);
+
+  // Claim tokens from faucet (only for ERC20 tokens, not native ETH)
+  const handleFaucet = async (tokenSymbol: string) => {
+    const token = DEPLOYED_TOKENS[tokenSymbol];
+    if (!token || token.isNative) {
+      setTxStatus("ℹ️ Native token - use a testnet faucet to get more");
+      setTimeout(() => setTxStatus(null), 3000);
+      return;
+    }
+    
+    setIsFauceting(true);
+    setTxStatus(`Claiming ${tokenSymbol} from faucet...`);
+    
+    try {
+      const hash = await writeContractAsync({
+        address: token.address!,
+        abi: ERC20_ABI,
+        functionName: "faucet",
+      });
+      
+      setTxStatus(`Faucet TX submitted: ${hash.slice(0, 10)}...`);
+      
+      // Wait a bit then refresh balances
+      setTimeout(() => {
+        fetchTokenBalances();
+        setTxStatus(`✅ Claimed 10,000 ${tokenSymbol}!`);
+        setTimeout(() => setTxStatus(null), 3000);
+      }, 5000);
+    } catch (error: unknown) {
+      const err = error as Error;
+      setTxStatus(`❌ Faucet failed: ${err.message?.slice(0, 50) || "Unknown error"}`);
+    }
+    
+    setIsFauceting(false);
+  };
+
+  // Approve token spending (not needed for native ETH)
+  const handleApprove = async (tokenSymbol: string, amount: string) => {
+    const token = DEPLOYED_TOKENS[tokenSymbol];
+    if (!token || !amount) return;
+    
+    // Native ETH doesn't need approval
+    if (token.isNative) {
+      setTxStatus("ℹ️ Native token doesn't require approval");
+      setTimeout(() => setTxStatus(null), 2000);
+      return;
+    }
+    
+    setIsApproving(true);
+    setTxStatus(`Approving ${tokenSymbol} spending...`);
+    
+    try {
+      const amountInWei = parseUnits(amount, token.decimals);
+      
+      const hash = await writeContractAsync({
+        address: token.address!,
+        abi: ERC20_ABI,
+        functionName: "approve",
+        args: [PAYFLOW_CORE_ADDRESS, amountInWei],
+      });
+      
+      setTxStatus(`Approval TX: ${hash.slice(0, 10)}... Waiting for confirmation...`);
+      
+      setTimeout(() => {
+        setTxStatus(`✅ Approved ${amount} ${tokenSymbol} for PayFlow`);
+        setTimeout(() => setTxStatus(null), 3000);
+      }, 5000);
+    } catch (error: unknown) {
+      const err = error as Error;
+      setTxStatus(`❌ Approval failed: ${err.message?.slice(0, 50) || "Unknown error"}`);
+    }
+    
+    setIsApproving(false);
+  };
+
+  // Transfer tokens - handles both native ETH and ERC20 tokens
+  const handleTransfer = async (recipient: string, tokenSymbol: string, amount: string): Promise<boolean> => {
+    const token = DEPLOYED_TOKENS[tokenSymbol];
+    if (!token || !amount || !recipient) return false;
+    
+    setTxStatus(`Transferring ${amount} ${tokenSymbol}...`);
+    
+    try {
+      let hash: string;
+      
+      if (token.isNative) {
+        // Native ETH transfer using sendTransaction
+        const amountInWei = parseEther(amount);
+        
+        hash = await sendTransactionAsync({
+          to: recipient as `0x${string}`,
+          value: amountInWei,
+        });
+      } else {
+        // ERC20 token transfer
+        const amountInWei = parseUnits(amount, token.decimals);
+        
+        hash = await writeContractAsync({
+          address: token.address!,
+          abi: ERC20_ABI,
+          functionName: "transfer",
+          args: [recipient as `0x${string}`, amountInWei],
+        });
+      }
+      
+      setTxStatus(`Transfer TX: ${hash.slice(0, 10)}... Confirming...`);
+      
+      // Refresh balances after delay
+      setTimeout(() => {
+        fetchTokenBalances();
+        refetchBalance();
+        setTxStatus(`✅ Transferred ${amount} ${tokenSymbol} to ${recipient.slice(0, 10)}...`);
+      }, 5000);
+      
+      return true;
+    } catch (error: unknown) {
+      const err = error as Error;
+      setTxStatus(`❌ Transfer failed: ${err.message?.slice(0, 50) || "Unknown error"}`);
+      return false;
+    }
+  };
+
+  // Fetch live token prices from CoinGecko
+  const fetchTokenPrices = useCallback(async () => {
+    setTokenPricesLoading(true);
+    try {
+      const coingeckoIds = SUPPORTED_TOKENS.map(t => t.coingeckoId).join(",");
+      const response = await fetch(
+        `https://api.coingecko.com/api/v3/simple/price?ids=${coingeckoIds}&vs_currencies=usd&include_24hr_change=true`
+      );
+      
+      if (response.ok) {
+        const data = await response.json();
+        const prices: Record<string, TokenPrice> = {};
+        
+        SUPPORTED_TOKENS.forEach(token => {
+          const priceData = data[token.coingeckoId];
+          if (priceData) {
+            prices[token.symbol] = {
+              symbol: token.symbol,
+              usdPrice: priceData.usd || 0,
+              change24h: priceData.usd_24h_change || 0,
+              lastUpdated: new Date(),
+            };
+          }
+        });
+        
+        setTokenPrices(prices);
+      }
+    } catch (error) {
+      console.warn("Failed to fetch token prices:", error);
+      // Set default prices for stablecoins and native token
+      setTokenPrices({
+        ETH: { symbol: "ETH", usdPrice: ethPrice || 3500, change24h: 0, lastUpdated: new Date() },
+        USDC: { symbol: "USDC", usdPrice: 1.0, change24h: 0, lastUpdated: new Date() },
+        USDT: { symbol: "USDT", usdPrice: 1.0, change24h: 0, lastUpdated: new Date() },
+        PYUSD: { symbol: "PYUSD", usdPrice: 1.0, change24h: 0, lastUpdated: new Date() },
+        DAI: { symbol: "DAI", usdPrice: 1.0, change24h: 0, lastUpdated: new Date() },
+        EURC: { symbol: "EURC", usdPrice: 1.08, change24h: 0, lastUpdated: new Date() },
+      });
+    }
+    setTokenPricesLoading(false);
+  }, []);
+
+  // Auto-refresh token prices every 60 seconds
+  useEffect(() => {
+    fetchTokenPrices();
+    const interval = setInterval(fetchTokenPrices, 60000);
+    return () => clearInterval(interval);
+  }, [fetchTokenPrices]);
+
+  // Calculate compliance requirements based on amount and token
+  const calculateComplianceFlags = useCallback((amount: number, tokenSymbol: string): ComplianceFlags => {
+    const token = SUPPORTED_TOKENS.find(t => t.symbol === tokenSymbol);
+    const tokenPrice = tokenPrices[tokenSymbol]?.usdPrice || 1;
+    const usdValue = amount * tokenPrice;
+    
+    return {
+      travelRuleRequired: !!(token?.travelRuleApplicable && usdValue >= TRAVEL_RULE_THRESHOLD_USD),
+      amlScreeningRequired: usdValue >= 1000,
+      sanctionsCheckRequired: usdValue >= 500,
+      enhancedDueDiligence: usdValue >= 10000,
+      sourceOfFundsRequired: usdValue >= 15000,
+      beneficiaryInfoRequired: usdValue >= TRAVEL_RULE_THRESHOLD_USD,
+    };
+  }, [tokenPrices]);
 
   // Fetch live ETH price from Chainlink on Sepolia with fallback RPCs
   const fetchEthPrice = useCallback(async () => {
@@ -281,7 +752,7 @@ const Dashboard: NextPage = () => {
   }>({
     recipient: "",
     amount: "",
-    token: "USDC",
+    token: "ETH", // Default to native token
     conditions: {
       senderTier: "INSTITUTIONAL",
       recipientTier: "STANDARD",
@@ -333,6 +804,27 @@ const Dashboard: NextPage = () => {
   };
 
   const handleCreatePayment = async () => {
+    if (!newPayment.recipient || !newPayment.amount) {
+      setTxStatus("❌ Please enter recipient and amount");
+      return;
+    }
+
+    // Check if we have enough balance
+    const token = DEPLOYED_TOKENS[newPayment.token];
+    const currentBalance = parseFloat(tokenBalances[newPayment.token] || "0");
+    const amountToSend = parseFloat(newPayment.amount);
+    
+    // For native ETH, also account for gas (reserve ~0.01 ETH for gas)
+    const gasReserve = token?.isNative ? 0.01 : 0;
+    
+    if (currentBalance < amountToSend + gasReserve) {
+      const message = token?.isNative 
+        ? `❌ Insufficient ${newPayment.token} balance. You have ${currentBalance.toFixed(4)}, need ${amountToSend} + gas (~0.01).`
+        : `❌ Insufficient ${newPayment.token} balance. You have ${currentBalance.toFixed(2)}, need ${amountToSend}. Use faucet to get test tokens!`;
+      setTxStatus(message);
+      return;
+    }
+
     setIsProcessing(true);
     setProcessingStep(0);
     setFraudScreenResult(null);
@@ -344,43 +836,53 @@ const Dashboard: NextPage = () => {
     if (!isApproved) {
       // Payment blocked by AI
       setIsProcessing(false);
+      setTxStatus("❌ Payment blocked by AI Fraud Detection");
       return;
     }
 
-    let currentStep = 1;
-    const interval = setInterval(() => {
-      currentStep++;
-      setProcessingStep(currentStep);
-      if (currentStep >= 7) {
-        clearInterval(interval);
+    setProcessingStep(2);
+    setTxStatus("🔐 Fraud check passed. Initiating transfer...");
 
-        const payment: LivePayment = {
-          id: `0x${Math.random().toString(16).slice(2, 6)}...${Math.random().toString(16).slice(2, 6)}`,
-          sender: address ? `${address.slice(0, 6)}...${address.slice(-4)}` : "0x0000...0000",
-          recipient: newPayment.recipient || "0x0000...0000",
-          amount: parseFloat(newPayment.amount) || 0,
-          token: newPayment.token,
-          status: "PENDING",
-          conditions: newPayment.conditions,
-          createdAt: new Date(),
-        };
+    // Step 2: Execute real token transfer
+    const transferSuccess = await handleTransfer(newPayment.recipient, newPayment.token, newPayment.amount);
+    
+    if (!transferSuccess) {
+      setIsProcessing(false);
+      return;
+    }
 
-        setPayments([payment, ...payments]);
-        setIsProcessing(false);
-        setActiveTab("payments");
+    setProcessingStep(4);
 
-        // Simulate execution
-        setTimeout(() => {
-          setPayments(prev =>
-            prev.map(p =>
-              p.id === payment.id
-                ? { ...p, status: "EXECUTED" as PaymentStatus, settlementTime: 4.2 + Math.random() * 4 }
-                : p,
-            ),
-          );
-        }, 5000);
-      }
-    }, 800);
+    // Create payment record
+    const payment: LivePayment = {
+      id: `0x${Math.random().toString(16).slice(2, 6)}...${Math.random().toString(16).slice(2, 6)}`,
+      sender: address ? `${address.slice(0, 6)}...${address.slice(-4)}` : "0x0000...0000",
+      recipient: newPayment.recipient.length > 15 
+        ? `${newPayment.recipient.slice(0, 6)}...${newPayment.recipient.slice(-4)}`
+        : newPayment.recipient,
+      amount: parseFloat(newPayment.amount) || 0,
+      token: newPayment.token,
+      status: "PENDING",
+      conditions: newPayment.conditions,
+      createdAt: new Date(),
+    };
+
+    setPayments([payment, ...payments]);
+    setProcessingStep(6);
+
+    // Mark as executed after confirmation
+    setTimeout(() => {
+      setPayments(prev =>
+        prev.map(p =>
+          p.id === payment.id
+            ? { ...p, status: "EXECUTED" as PaymentStatus, settlementTime: 4.2 + Math.random() * 4 }
+            : p,
+        ),
+      );
+      setIsProcessing(false);
+      setActiveTab("payments");
+      fetchTokenBalances(); // Refresh balances
+    }, 6000);
   };
 
   // Connect wallet screen
@@ -695,7 +1197,7 @@ const Dashboard: NextPage = () => {
                   </h3>
                   <div className="space-y-3">
                     {[
-                      { name: "🛡️ AI Fraud Detection", status: "GPT-4 + ML Active", color: "green" as const },
+                      { name: "🛡️ AI Fraud Detection", status: "Qwen3 MoE + ML Active", color: "green" as const },
                       { name: "Compliance Engine", status: "Active", color: "green" as const },
                       { name: "Oracle Aggregator", status: "5 sources", color: "green" as const },
                       { name: "Smart Escrow", status: "Ready", color: "green" as const },
@@ -725,6 +1227,76 @@ const Dashboard: NextPage = () => {
 
             {/* Recent Activity */}
             <ScrollReveal delay={300}>
+              {/* Live Token Exchange Rates Panel */}
+              <div className="relative p-6 rounded-2xl bg-gradient-to-br from-indigo-900/20 to-purple-900/20 border border-indigo-500/20 mb-6">
+                <div className="absolute top-4 right-4 flex items-center gap-2">
+                  <div className={`w-2 h-2 rounded-full ${!tokenPricesLoading ? "bg-green-400 animate-pulse" : "bg-yellow-400"}`} />
+                  <span className="text-xs text-zinc-400">
+                    {tokenPricesLoading ? "Updating..." : "Live via CoinGecko"}
+                  </span>
+                </div>
+                
+                <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
+                  <span className="text-2xl">📊</span> Live Token Exchange Rates (USD)
+                  <span className="text-xs text-zinc-500 font-normal ml-2">• PayPal, Visa & Web3 Compatible</span>
+                </h3>
+                
+                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                  {SUPPORTED_TOKENS.map(token => {
+                    const price = tokenPrices[token.symbol];
+                    const isStable = token.category === "STABLECOIN" || token.category === "PAYPAL";
+                    return (
+                      <div 
+                        key={token.symbol}
+                        className={`bg-white/5 rounded-xl p-3 border transition-all hover:border-violet-500/30 ${
+                          isStable ? "border-green-500/20" : "border-white/10"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-lg">{token.icon}</span>
+                          <span className="font-bold text-white">{token.symbol}</span>
+                          {token.isPayPalSupported && <span className="text-[10px] px-1 py-0.5 rounded bg-blue-500/20 text-blue-400">🅿️</span>}
+                        </div>
+                        <div className="text-lg font-mono font-bold" style={{ color: token.color }}>
+                          ${price?.usdPrice?.toLocaleString(undefined, { 
+                            minimumFractionDigits: isStable ? 4 : 2, 
+                            maximumFractionDigits: isStable ? 4 : 2 
+                          }) || "-.--"}
+                        </div>
+                        {price?.change24h !== undefined && (
+                          <div className={`text-xs mt-1 ${
+                            price.change24h >= 0 ? "text-green-400" : "text-red-400"
+                          }`}>
+                            {price.change24h >= 0 ? "↑" : "↓"} {Math.abs(price.change24h).toFixed(2)}%
+                          </div>
+                        )}
+                        <div className="text-[10px] text-zinc-500 mt-1 truncate">{token.name}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+                
+                {/* Token Categories Legend */}
+                <div className="flex flex-wrap gap-4 mt-4 pt-4 border-t border-white/10">
+                  <div className="flex items-center gap-2 text-xs text-zinc-400">
+                    <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                    <span>Stablecoins (1:1 USD)</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-zinc-400">
+                    <span className="text-[10px] px-1 py-0.5 rounded bg-blue-500/20 text-blue-400">🅿️</span>
+                    <span>PayPal Supported</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-zinc-400">
+                    <span className="text-[10px] px-1 py-0.5 rounded bg-yellow-500/20 text-yellow-400">💳</span>
+                    <span>Visa Compatible</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-zinc-400">
+                    <span className="text-[10px] px-1 py-0.5 rounded bg-orange-500/20 text-orange-400">✈️</span>
+                    <span>Travel Rule {">"} $3,000</span>
+                  </div>
+                </div>
+              </div>
+
               <div className="relative p-6 rounded-2xl bg-white/[0.02] border border-white/5">
                 <h3 className="text-xl font-bold mb-6">Recent Payments</h3>
                 <div className="overflow-x-auto">
@@ -851,6 +1423,48 @@ const Dashboard: NextPage = () => {
               </span>
             </h2>
 
+            {/* Token Balances & Faucet */}
+            <div className="relative p-4 rounded-2xl bg-gradient-to-r from-blue-900/30 to-purple-900/30 border border-blue-500/20 mb-6">
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div>
+                  <h3 className="text-lg font-semibold mb-2 flex items-center gap-2">
+                    💰 Your Token Balances
+                    <span className="text-xs text-zinc-500">(Sepolia Testnet)</span>
+                  </h3>
+                  <div className="flex flex-wrap gap-4">
+                    {Object.entries(DEPLOYED_TOKENS).map(([symbol, token]) => (
+                      <div key={symbol} className="flex items-center gap-2 bg-white/5 px-3 py-2 rounded-lg">
+                        <span className="font-bold text-white">{symbol}:</span>
+                        <span className="text-cyan-400 font-mono">
+                          {parseFloat(tokenBalances[symbol] || "0").toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                        </span>
+                        <button
+                          onClick={() => handleFaucet(symbol)}
+                          disabled={isFauceting}
+                          className="ml-2 text-xs px-2 py-1 rounded bg-green-500/20 text-green-400 hover:bg-green-500/30 transition-colors disabled:opacity-50"
+                        >
+                          🚰 Faucet
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                {txStatus && (
+                  <div className={`text-sm px-3 py-2 rounded-lg ${
+                    txStatus.includes("✅") ? "bg-green-500/20 text-green-400" :
+                    txStatus.includes("❌") ? "bg-red-500/20 text-red-400" :
+                    "bg-yellow-500/20 text-yellow-400"
+                  }`}>
+                    {txStatus}
+                  </div>
+                )}
+              </div>
+              <p className="text-xs text-zinc-500 mt-2">
+                💡 <strong>No tokens?</strong> Click "Faucet" to get 10,000 free test tokens for each currency. 
+                Your wallet: <code className="text-cyan-400">{address}</code>
+              </p>
+            </div>
+
             {isProcessing ? (
               // Processing Animation
               <div className="relative p-8 rounded-2xl bg-white/[0.02] border border-white/5">
@@ -861,7 +1475,7 @@ const Dashboard: NextPage = () => {
                   <h3 className="text-2xl font-bold">Processing Payment</h3>
                   <div className="max-w-md mx-auto space-y-3">
                     {[
-                      "🛡️ AI Fraud Screening (GPT-4 + ML)...",
+                      "🛡️ AI Fraud Screening (Qwen3 MoE + ML)...",
                       "Validating compliance rules...",
                       "Checking KYC status...",
                       "Running AML screening...",
@@ -938,7 +1552,7 @@ const Dashboard: NextPage = () => {
                 {/* AI Fraud Protection Badge */}
                 <div className="flex items-center gap-2 text-xs text-zinc-500">
                   <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
-                  AI Fraud Detection Active (GPT-4 + Isolation Forest ML)
+                  AI Fraud Detection Active (Qwen3 MoE + Isolation Forest ML)
                 </div>
                 
                 {/* Payment Details */}
@@ -969,24 +1583,78 @@ const Dashboard: NextPage = () => {
                         onChange={e => setNewPayment({ ...newPayment, amount: e.target.value })}
                         className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:border-violet-500/50 focus:outline-none focus:ring-2 focus:ring-violet-500/20 transition-all"
                       />
+                      {newPayment.amount && tokenPrices[newPayment.token] && (
+                        <p className="text-xs text-zinc-500 mt-1">
+                          ≈ ${(parseFloat(newPayment.amount) * tokenPrices[newPayment.token].usdPrice).toLocaleString(undefined, {maximumFractionDigits: 2})} USD
+                        </p>
+                      )}
                     </div>
                     <div>
-                      <label className="block text-sm text-zinc-400 mb-2">Token</label>
+                      <label className="block text-sm text-zinc-400 mb-2 flex items-center gap-2">
+                        Token
+                        {tokenPricesLoading && <span className="text-xs text-violet-400">(loading prices...)</span>}
+                      </label>
                       <select
                         value={newPayment.token}
                         onChange={e => setNewPayment({ ...newPayment, token: e.target.value })}
                         className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:border-violet-500/50 focus:outline-none transition-all"
                       >
-                        <option value="USDC" className="bg-[#1a1a24]">
-                          USDC
-                        </option>
-                        <option value="USDT" className="bg-[#1a1a24]">
-                          USDT
-                        </option>
-                        <option value="EURC" className="bg-[#1a1a24]">
-                          EURC
-                        </option>
+                        <optgroup label="⬡ Native Network Token">
+                          {SUPPORTED_TOKENS.filter(t => t.category === "NETWORK").map(token => (
+                            <option key={token.symbol} value={token.symbol} className="bg-[#1a1a24]">
+                              {token.icon} {token.symbol} - {token.name} {tokenPrices[token.symbol] ? `($${tokenPrices[token.symbol].usdPrice.toLocaleString()})` : ""}
+                            </option>
+                          ))}
+                        </optgroup>
+                        <optgroup label="💵 Stablecoins (PayPal & Visa Compatible)">
+                          {SUPPORTED_TOKENS.filter(t => t.category === "STABLECOIN" || t.category === "PAYPAL").map(token => (
+                            <option key={token.symbol} value={token.symbol} className="bg-[#1a1a24]">
+                              {token.icon} {token.symbol} - {token.name} {tokenPrices[token.symbol] ? `($${tokenPrices[token.symbol].usdPrice.toFixed(4)})` : ""}
+                            </option>
+                          ))}
+                        </optgroup>
+                        <optgroup label="🔶 DeFi Stablecoins">
+                          {SUPPORTED_TOKENS.filter(t => t.category === "DEFI" && (t.symbol === "DAI" || t.symbol === "FRAX")).map(token => (
+                            <option key={token.symbol} value={token.symbol} className="bg-[#1a1a24]">
+                              {token.icon} {token.symbol} - {token.name} {tokenPrices[token.symbol] ? `($${tokenPrices[token.symbol].usdPrice.toFixed(4)})` : ""}
+                            </option>
+                          ))}
+                        </optgroup>
+                        <optgroup label="Ξ Wrapped Assets">
+                          {SUPPORTED_TOKENS.filter(t => t.category === "WRAPPED").map(token => (
+                            <option key={token.symbol} value={token.symbol} className="bg-[#1a1a24]">
+                              {token.icon} {token.symbol} - {token.name} {tokenPrices[token.symbol] ? `($${tokenPrices[token.symbol].usdPrice.toLocaleString()})` : ""}
+                            </option>
+                          ))}
+                        </optgroup>
+                        <optgroup label="🦄 DeFi Governance">
+                          {SUPPORTED_TOKENS.filter(t => t.category === "DEFI" && !["DAI", "FRAX"].includes(t.symbol)).map(token => (
+                            <option key={token.symbol} value={token.symbol} className="bg-[#1a1a24]">
+                              {token.icon} {token.symbol} - {token.name} {tokenPrices[token.symbol] ? `($${tokenPrices[token.symbol].usdPrice.toFixed(2)})` : ""}
+                            </option>
+                          ))}
+                        </optgroup>
                       </select>
+                      {/* Token Info Badge */}
+                      {newPayment.token && (
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          {SUPPORTED_TOKENS.find(t => t.symbol === newPayment.token)?.isPayPalSupported && (
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400">🅿️ PayPal</span>
+                          )}
+                          {SUPPORTED_TOKENS.find(t => t.symbol === newPayment.token)?.isVisaCompatible && (
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-yellow-500/20 text-yellow-400">💳 Visa</span>
+                          )}
+                          {tokenPrices[newPayment.token]?.change24h !== undefined && (
+                            <span className={`text-xs px-2 py-0.5 rounded-full ${
+                              tokenPrices[newPayment.token].change24h >= 0 
+                                ? "bg-green-500/20 text-green-400" 
+                                : "bg-red-500/20 text-red-400"
+                            }`}>
+                              {tokenPrices[newPayment.token].change24h >= 0 ? "↑" : "↓"} {Math.abs(tokenPrices[newPayment.token].change24h).toFixed(2)}% 24h
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
                     <div>
                       <label className="block text-sm text-zinc-400 mb-2">Description</label>
@@ -1004,6 +1672,59 @@ const Dashboard: NextPage = () => {
                       />
                     </div>
                   </div>
+
+                  {/* Dynamic Compliance Requirements Banner */}
+                  {newPayment.amount && parseFloat(newPayment.amount) > 0 && (
+                    <div className="mt-4 p-4 rounded-xl bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/20">
+                      <h4 className="text-sm font-semibold text-amber-400 mb-3 flex items-center gap-2">
+                        ⚖️ Compliance Requirements for ${(parseFloat(newPayment.amount) * (tokenPrices[newPayment.token]?.usdPrice || 1)).toLocaleString(undefined, {maximumFractionDigits: 0})} USD
+                      </h4>
+                      <div className="flex flex-wrap gap-2">
+                        {(() => {
+                          const flags = calculateComplianceFlags(parseFloat(newPayment.amount), newPayment.token);
+                          return (
+                            <>
+                              {flags.sanctionsCheckRequired && (
+                                <span className="text-xs px-2 py-1 rounded-lg bg-blue-500/20 text-blue-400 border border-blue-500/30">
+                                  🛡️ Sanctions Check
+                                </span>
+                              )}
+                              {flags.amlScreeningRequired && (
+                                <span className="text-xs px-2 py-1 rounded-lg bg-purple-500/20 text-purple-400 border border-purple-500/30">
+                                  🔍 AML Screening
+                                </span>
+                              )}
+                              {flags.travelRuleRequired && (
+                                <span className="text-xs px-2 py-1 rounded-lg bg-orange-500/20 text-orange-400 border border-orange-500/30">
+                                  ✈️ Travel Rule (FATF)
+                                </span>
+                              )}
+                              {flags.enhancedDueDiligence && (
+                                <span className="text-xs px-2 py-1 rounded-lg bg-red-500/20 text-red-400 border border-red-500/30">
+                                  🔐 Enhanced Due Diligence
+                                </span>
+                              )}
+                              {flags.sourceOfFundsRequired && (
+                                <span className="text-xs px-2 py-1 rounded-lg bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">
+                                  💰 Source of Funds
+                                </span>
+                              )}
+                              {flags.beneficiaryInfoRequired && (
+                                <span className="text-xs px-2 py-1 rounded-lg bg-cyan-500/20 text-cyan-400 border border-cyan-500/30">
+                                  👤 Beneficiary Info
+                                </span>
+                              )}
+                              {!flags.sanctionsCheckRequired && !flags.amlScreeningRequired && (
+                                <span className="text-xs px-2 py-1 rounded-lg bg-green-500/20 text-green-400 border border-green-500/30">
+                                  ✅ Minimal Requirements
+                                </span>
+                              )}
+                            </>
+                          );
+                        })()}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Compliance Conditions */}

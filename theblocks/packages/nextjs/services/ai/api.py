@@ -65,7 +65,7 @@ class TransactionRequest(BaseModel):
     recipient: str = Field(..., description="Recipient wallet address")
     amount: float = Field(..., gt=0, description="Transaction amount in USDC")
     timestamp: Optional[int] = Field(None, description="Unix timestamp (defaults to now)")
-    use_ai: bool = Field(True, description="Whether to use GPT-4 for deep analysis")
+    use_ai: bool = Field(True, description="Whether to use Qwen3 MoE for deep analysis")
 
 class BatchTransactionRequest(BaseModel):
     """Request model for batch analysis."""
@@ -159,7 +159,7 @@ async def lifespan(app: FastAPI):
     logger.info("🚀 Starting PayFlow Secure AI Oracle API")
     oracle = get_oracle()
     logger.info(f"📍 Oracle Address: {oracle.signer.address}")
-    logger.info(f"🤖 GPT-4 Enabled: {oracle.gpt4.enabled}")
+    logger.info(f"🤖 Qwen3 MoE Enabled: {oracle.qwen3.enabled}")
     yield
     logger.info("🛑 Shutting down PayFlow Secure AI Oracle API")
 
@@ -172,7 +172,7 @@ app = FastAPI(
     Each response includes an ECDSA signature that can be verified on-chain using Solidity's `ecrecover`.
     
     ### Features
-    - 🧠 **Hybrid AI**: Local ML (Isolation Forest) + GPT-4 for intelligent analysis
+    - 🧠 **Hybrid AI**: Local ML (Isolation Forest) + Qwen3 MoE for intelligent analysis
     - 🔐 **Cryptographic Signatures**: All responses are signed for on-chain verification
     - ⚡ **Low Latency**: <100ms typical response time
     - 📡 **Real-time Monitoring**: WebSocket support for live updates
@@ -207,7 +207,7 @@ async def root():
         "version": oracle.MODEL_VERSION,
         "status": "operational",
         "oracle_address": oracle.signer.address,
-        "gpt4_enabled": oracle.gpt4.enabled,
+        "qwen3_enabled": oracle.qwen3.enabled,
         "ml_trained": oracle.ml_engine.is_trained,
     }
 
@@ -218,7 +218,7 @@ async def health():
     return {
         "status": "healthy",
         "oracle_address": oracle.signer.address,
-        "gpt4_available": oracle.gpt4.enabled,
+        "qwen3_available": oracle.qwen3.enabled,
         "ml_trained": oracle.ml_engine.is_trained,
         "training_samples": len(oracle.ml_engine.training_buffer),
         "active_profiles": len(oracle.profiles),
@@ -256,7 +256,7 @@ async def analyze_transaction(
             recipient=request.recipient,
             amount=request.amount,
             timestamp=request.timestamp,
-            use_gpt4=request.use_ai
+            use_qwen3=request.use_ai
         )
         
         # Broadcast to WebSocket clients in background
@@ -291,7 +291,7 @@ async def analyze_batch(
             recipient=tx.recipient,
             amount=tx.amount,
             timestamp=tx.timestamp,
-            use_gpt4=tx.use_ai
+            use_qwen3=tx.use_ai
         ))
     
     results = await asyncio.gather(*tasks, return_exceptions=True)
@@ -345,7 +345,7 @@ async def get_oracle_format(request: TransactionRequest) -> OracleFormatResponse
         recipient=request.recipient,
         amount=request.amount,
         timestamp=request.timestamp,
-        use_gpt4=request.use_ai
+        use_qwen3=request.use_ai
     )
     
     return OracleFormatResponse(
@@ -459,7 +459,7 @@ async def get_oracle_info() -> Dict:
             "graph_analysis",
             "timing_analysis",
             "isolation_forest",
-            "gpt4_analysis" if oracle.gpt4.enabled else None
+            "qwen3_analysis" if oracle.qwen3.enabled else None
         ],
         "signature_type": "EIP-191",
         "chain_compatible": ["ethereum", "sepolia", "polygon", "arbitrum"]
@@ -685,7 +685,7 @@ async def websocket_endpoint(websocket: WebSocket):
                     sender=tx["sender"],
                     recipient=tx["recipient"],
                     amount=tx["amount"],
-                    use_gpt4=tx.get("use_ai", True)
+                    use_qwen3=tx.get("use_ai", True)
                 )
                 await websocket.send_json({
                     "type": "analysis_result",
@@ -714,7 +714,7 @@ if __name__ == "__main__":
     ║                                                                           ║
     ║           PayFlow Secure AI Oracle - Production Server                    ║
     ║                                                                           ║
-    ║   🤖 Hybrid AI: Local ML + GPT-4 for intelligent fraud detection         ║
+    ║   🤖 Hybrid AI: Local ML + Qwen3 MoE for intelligent fraud detection     ║
     ║   🔐 Cryptographic: ECDSA signatures for on-chain verification           ║
     ║   ⚡ Low Latency: <100ms typical response time                           ║
     ║   📡 Real-time: WebSocket support for live monitoring                    ║

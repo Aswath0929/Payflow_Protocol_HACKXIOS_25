@@ -6,7 +6,7 @@
 ║   This demo showcases the 3-layer ensemble architecture:                             ║
 ║   • Layer 1: Local Neural Network (50% weight) - 100% OFFLINE                        ║
 ║   • Layer 2: Traditional ML (30% weight) - Isolation Forest, DBSCAN                  ║
-║   • Layer 3: GPT-4 Enhancement (20% weight) - OPTIONAL, API-based                    ║
+║   • Layer 3: Qwen3 MoE Enhancement (20% weight) - Local LLM via Ollama               ║
 ║                                                                                       ║
 ║   Hackxios 2K25 - PayFlow Protocol                                                   ║
 ╚═══════════════════════════════════════════════════════════════════════════════════════╝
@@ -23,7 +23,7 @@ from secureAIOracle import SecureAIOracle, Config
 def print_header():
     print("\n" + "═" * 80)
     print("║" + " " * 20 + "PAYFLOW AI FRAUD DETECTION DEMO" + " " * 26 + "║")
-    print("║" + " " * 15 + "Best of Both Worlds: Neural Network + GPT-4" + " " * 17 + "║")
+    print("║" + " " * 13 + "Best of Both Worlds: Neural Network + Qwen3 MoE" + " " * 15 + "║")
     print("═" * 80 + "\n")
 
 def print_section(title: str):
@@ -100,7 +100,7 @@ async def demo_neural_network_standalone():
 
 async def demo_full_oracle():
     """Demo the full SecureAIOracle with all layers."""
-    print_section("FULL 3-LAYER ENSEMBLE (Neural Network + ML + GPT-4)")
+    print_section("FULL 3-LAYER ENSEMBLE (Neural Network + ML + Qwen3 MoE)")
     
     print("  Initializing SecureAIOracle...")
     oracle = SecureAIOracle()
@@ -108,16 +108,13 @@ async def demo_full_oracle():
     print(f"  ✓ Model Version: {oracle.MODEL_VERSION}")
     print(f"  ✓ Neural Network: ACTIVE")
     print(f"  ✓ Traditional ML: ACTIVE (Isolation Forest, DBSCAN)")
-    print(f"  ✓ GPT-4 Enhancement: {'ACTIVE' if oracle.gpt4.enabled else 'DISABLED (no API key)'}")
-    print(f"  ✓ Oracle Signer: {oracle.signer.address[:20]}...")
-    
+    print(f"  ✓ Qwen3 MoE: {'ACTIVE' if oracle.qwen3.enabled else 'STARTING... Run: ollama serve && ollama pull qwen3:8b'}")
+    print(f"  ✓ Oracle Signer: {oracle.signer.address[:20]}..."))
+
     print("\n  Weight Distribution:")
     print(f"    • Neural Network: 50% (Primary - always runs offline)")
     print(f"    • Traditional ML:  30% (Secondary - statistical analysis)")
-    print(f"    • GPT-4:          20% (Enhancement - when available)")
-    
-    print("\n  Analyzing test transaction...\n")
-    
+    print(f"    • Qwen3 MoE:      20% (Enhancement - local LLM)")
     # Analyze a transaction
     start = time.time()
     result = await oracle.analyze_transaction(
@@ -142,11 +139,11 @@ async def demo_full_oracle():
     print_score_bar("Graph", result.graph_score)
     print_score_bar("Timing", result.timing_score)
     
-    print("\n  GPT-4 LAYER:")
-    if oracle.gpt4.enabled:
+    print("\n  QWEN3 MOE LAYER:")
+    if oracle.qwen3.enabled:
         print_score_bar("AI Score", result.ai_score)
     else:
-        print("      ⚠️ GPT-4 disabled - add OPENAI_API_KEY to enable")
+        print("      ⚠️ Qwen3 not running - start with: ollama serve && ollama pull qwen3:8b")
     
     print("\n  FINAL COMBINED RESULT:")
     print_score_bar("OVERALL SCORE", result.overall_score)
@@ -210,11 +207,11 @@ def print_summary():
   │  └───────────────────────────────────────────────────────────────┘  │
   │                              ▼                                      │
   │  ┌───────────────────────────────────────────────────────────────┐  │
-  │  │  🤖 GPT-4 ENHANCEMENT (20%) - OPTIONAL                        │  │
+  │  │  🤖 QWEN3 MOE ENHANCEMENT (20%) - LOCAL LLM                      │  │
   │  │  • Context-aware fraud reasoning                              │  │
   │  │  • Natural language explanations                              │  │
   │  │  • Called for: anomalies, high-value, flagged transactions   │  │
-  │  │  • Enable with OPENAI_API_KEY                                 │  │
+  │  │  • 100% offline via Ollama                                   │  │
   │  └───────────────────────────────────────────────────────────────┘  │
   │                              ▼                                      │
   │  ┌───────────────────────────────────────────────────────────────┐  │

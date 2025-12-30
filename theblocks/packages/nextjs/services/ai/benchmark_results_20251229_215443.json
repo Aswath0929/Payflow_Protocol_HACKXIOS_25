@@ -1,0 +1,25 @@
+{
+  "timestamp": "2025-12-29T21:54:43.137715",
+  "test_mode": "quick",
+  "transaction_count": 10,
+  "latency": {
+    "avg_ms": 1879.03,
+    "p50_ms": 1202.24,
+    "p95_ms": 4995.93,
+    "p99_ms": 7424.26,
+    "min_ms": 1105.5,
+    "max_ms": 8031.34
+  },
+  "throughput_tx_per_sec": 0.53,
+  "accuracy_percent": 90.0,
+  "distribution": {
+    "<100ms": 0,
+    "100-200ms": 0,
+    "200-300ms": 0,
+    "300-500ms": 0,
+    "500ms+": 10
+  },
+  "passes": 1,
+  "partial": 0,
+  "total_checks": 4
+}

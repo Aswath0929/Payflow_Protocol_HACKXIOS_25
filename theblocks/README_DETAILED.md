@@ -671,7 +671,7 @@ In addition to oracle security, The Blocks integrates an **Expert AI Oracle** fo
 |-------|--------|---------|
 | Neural Network | 25% | MLP + Autoencoder anomaly detection |
 | Typology Detector | 25% | 15+ fraud pattern rules |
-| Qwen3:8b LLM | 30% | GPT-4 level reasoning (100% local) |
+| Qwen3:8b LLM | 30% | Advanced MoE reasoning (100% local) |
 | Compliance Engine | 20% | FATF/OFAC regulatory checks |
 
 ### Running the AI Oracle

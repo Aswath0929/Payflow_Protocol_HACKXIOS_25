@@ -148,7 +148,7 @@ const deploySecureFraudOracle: DeployFunction = async function (hre: HardhatRunt
   console.log("║                          NEXT STEPS                                          ║");
   console.log("╠═══════════════════════════════════════════════════════════════════════════════╣");
   console.log("║  1. Set ORACLE_PRIVATE_KEY in .env for Python service                        ║");
-  console.log("║  2. Set OPENAI_API_KEY in .env for GPT-4 analysis                           ║");
+  console.log("║  2. Start Qwen3 MoE: ollama serve && ollama pull qwen3:8b                   ║");
   console.log("║  3. Start AI Oracle: cd packages/nextjs/services/ai && python api.py        ║");
   console.log("║  4. Update frontend with contract addresses                                  ║");
   console.log("╚═══════════════════════════════════════════════════════════════════════════════╝\n");

@@ -239,11 +239,11 @@ class SecureAIClient:
         transaction_data: Dict[str, Any]
     ) -> AIAnalysisResult:
         """
-        Analyze transaction using OpenAI GPT-4.
-        """
-        if not Config.OPENAI_API_KEY:
-            raise ValueError("OpenAI API key not configured")
+        Analyze transaction using Qwen3 Local LLM (via Ollama).
         
+        UPGRADED: Now uses local Qwen3 8B MoE instead of OpenAI.
+        100% offline, runs on RTX 4070 GPU.
+        """
         start_time = time.time()
         
         prompt = f"""You are a fraud detection AI for stablecoin transactions.
@@ -282,28 +282,28 @@ Consider:
 ONLY respond with the JSON, no other text."""
 
         try:
+            # Use Qwen3 via Ollama (local GPU)
             response = await self.http_client.post(
-                "https://api.openai.com/v1/chat/completions",
-                headers={
-                    "Authorization": f"Bearer {Config.OPENAI_API_KEY}",
-                    "Content-Type": "application/json"
-                },
+                "http://localhost:11434/api/generate",
                 json={
-                    "model": "gpt-4-turbo-preview",
-                    "messages": [
-                        {"role": "system", "content": "You are a fraud detection AI. Respond only with valid JSON."},
-                        {"role": "user", "content": prompt}
-                    ],
-                    "temperature": 0.1,  # Low temperature for consistent results
-                    "max_tokens": 500
+                    "model": "qwen3:8b",
+                    "prompt": prompt,
+                    "stream": False,
+                    "options": {
+                        "temperature": 0.1,
+                        "num_predict": 500
+                    }
                 }
             )
             
             response.raise_for_status()
             result = response.json()
             
-            # Parse AI response
-            ai_response = result["choices"][0]["message"]["content"]
+            # Parse Qwen3 response (Ollama format)
+            ai_response = result.get("response", "{}")
+            # Clean thinking tags if present
+            if "<think>" in ai_response:
+                ai_response = ai_response.split("</think>")[-1].strip()
             analysis = json.loads(ai_response)
             
             processing_time = (time.time() - start_time) * 1000
@@ -312,14 +312,14 @@ ONLY respond with the JSON, no other text."""
                 risk_score=min(100, max(0, int(analysis.get("risk_score", 50)))),
                 risk_level=analysis.get("risk_level", "MEDIUM"),
                 approved=analysis.get("approved", True),
-                explanation=analysis.get("explanation", "AI analysis complete"),
+                explanation=analysis.get("explanation", "Qwen3 analysis complete"),
                 confidence=float(analysis.get("confidence", 0.8)),
-                model="gpt-4-turbo-preview",
+                model="qwen3:8b-local",
                 processing_time_ms=processing_time
             )
             
         except httpx.HTTPError as e:
-            logger.error(f"OpenAI API error: {e}")
+            logger.error(f"Qwen3/Ollama API error: {e}")
             raise
         except json.JSONDecodeError as e:
             logger.error(f"Failed to parse AI response: {e}")

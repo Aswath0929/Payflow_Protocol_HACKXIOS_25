@@ -3,6 +3,7 @@
 ║                     PAYFLOW 15-TYPOLOGY FRAUD DETECTION ENGINE                        ║
 ║                                                                                       ║
 ║   Comprehensive Fraud Pattern Detection Based on 2025 Research                       ║
+║   NOW WITH GNN FUSION - GraphSAGE-enhanced typology detection                        ║
 ║                                                                                       ║
 ║   15 Fraud Patterns by Market Impact:                                                ║
 ║   ┌─────────────────────────────────────────────────────────────────────────────┐    ║
@@ -23,6 +24,11 @@
 ║   │ 15. Romance Scams ......... $0.2B losses .... 88% detection target          │    ║
 ║   └─────────────────────────────────────────────────────────────────────────────┘    ║
 ║                                                                                       ║
+║   GNN FUSION:                                                                         ║
+║   • GraphSAGE embeddings enhance rule-based detection                               ║
+║   • 64-dim graph features fused with 34-dim transaction features                    ║
+║   • Neighbor-aware pattern recognition for chain detection                          ║
+║                                                                                       ║
 ║   Hackxios 2K25 - PayFlow Protocol                                                   ║
 ╚═══════════════════════════════════════════════════════════════════════════════════════╝
 """
@@ -35,6 +41,18 @@ from typing import Dict, List, Optional, Tuple, Any, Set
 from enum import Enum
 from collections import defaultdict
 import math
+
+# Import GNN Engine for fusion (with fallback)
+try:
+    from .graphNeuralNetwork import get_gnn_engine, GNNPrediction, GNNFraudTypology
+    GNN_AVAILABLE = True
+except ImportError:
+    try:
+        from graphNeuralNetwork import get_gnn_engine, GNNPrediction, GNNFraudTypology
+        GNN_AVAILABLE = True
+    except ImportError:
+        GNN_AVAILABLE = False
+        GNNPrediction = None
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -92,12 +110,19 @@ class TypologyDetection:
 
 @dataclass
 class TypologyAnalysisResult:
-    """Complete result of 15-typology analysis."""
+    """Complete result of 15-typology analysis with GNN fusion."""
     detected_typologies: List[TypologyDetection]
     primary_typology: Optional[TypologyDetection]
     aggregate_risk_score: float  # 0-100
     analysis_time_ms: float
     transaction_id: str
+    # GNN Fusion Results (NEW)
+    gnn_enabled: bool = False
+    gnn_predicted_typology: str = "Unknown"
+    gnn_typology_confidence: float = 0.0
+    gnn_has_graph_context: bool = False
+    gnn_neighbor_count: int = 0
+    gnn_boost_applied: bool = False  # True if GNN boosted/modified detection
     
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -117,14 +142,21 @@ class TypologyAnalysisResult:
 class FraudTypologyDetector:
     """
     Expert-level fraud detection with 15 distinct typology detectors.
+    NOW WITH GNN FUSION - GraphSAGE enhances pattern detection.
     
     Each detector implements:
     - Rule-based pattern matching
     - Statistical anomaly detection
-    - Graph analysis where applicable
-    - Confidence scoring
+    - Graph analysis via GNN embeddings (NEW)
+    - Confidence scoring with GNN boost
     
     Target: 95%+ aggregate detection rate, <2% false positives
+    
+    GNN FUSION Architecture:
+    - GraphSAGE provides 15-class typology prediction
+    - GNN confidence boosts matching rule-based detections
+    - Novel typologies from GNN are added to detection list
+    - Aggregate score weighted by GNN contribution
     """
     
     # ═══ AML THRESHOLDS ═══
@@ -150,10 +182,73 @@ class FraudTypologyDetector:
     
     STRUCTURING_AMOUNTS = [3000, 5000, 9999, 9998, 9997, 9500, 14999, 49999]
     
+    # GNN Typology Index to FraudTypology Mapping
+    GNN_TYPOLOGY_MAP = {
+        0: FraudTypology.RUG_PULL,
+        1: FraudTypology.PIG_BUTCHERING,
+        2: FraudTypology.MIXER_TUMBLING,
+        3: FraudTypology.CHAIN_OBFUSCATION,
+        4: FraudTypology.FAKE_TOKEN,
+        5: FraudTypology.FLASH_LOAN,
+        6: FraudTypology.WASH_TRADING,
+        7: FraudTypology.STRUCTURING,
+        8: FraudTypology.VELOCITY_ATTACK,
+        9: FraudTypology.PEEL_CHAIN,
+        10: FraudTypology.DUSTING,
+        11: FraudTypology.ADDRESS_POISONING,
+        12: FraudTypology.APPROVAL_EXPLOIT,
+        13: FraudTypology.SIM_SWAP,
+        14: FraudTypology.ROMANCE_SCAM,
+    }
+    
     def __init__(self):
         self.transaction_history: Dict[str, List[Dict]] = defaultdict(list)
         self.address_graph: Dict[str, Set[str]] = defaultdict(set)
         self.risk_scores: Dict[str, float] = {}
+        
+        # GNN Engine for fusion (NEW)
+        self.gnn_engine = None
+        self.gnn_enabled = False
+        self._initialize_gnn()
+    
+    def _initialize_gnn(self):
+        """Initialize GNN Engine for enhanced typology detection."""
+        if not GNN_AVAILABLE:
+            return
+        
+        try:
+            self.gnn_engine = get_gnn_engine()
+            self.gnn_enabled = self.gnn_engine.enabled
+        except Exception as e:
+            self.gnn_enabled = False
+    
+    def _get_gnn_prediction(
+        self,
+        tx_id: str,
+        sender: str,
+        recipient: str,
+        amount: float,
+        timestamp: int,
+        features: np.ndarray
+    ):
+        """Get GNN typology prediction."""
+        if not self.gnn_enabled or self.gnn_engine is None:
+            return None
+        
+        try:
+            # Use first 13 features for GNN (matching LocalNeuralNetwork)
+            standard_features = features[:13] if len(features) >= 13 else np.pad(features, (0, 13 - len(features)))
+            
+            return self.gnn_engine.predict(
+                tx_id=tx_id,
+                sender=sender,
+                recipient=recipient,
+                amount=amount,
+                timestamp=float(timestamp),
+                standard_features=standard_features
+            )
+        except Exception:
+            return None
         
     def analyze_all_typologies(
         self,
@@ -257,8 +352,69 @@ class FraudTypologyDetector:
         if romance.confidence > 0.3:
             detections.append(romance)
         
-        # Calculate aggregate risk score
+        # ═══ GNN FUSION (NEW) ═══
+        # Get GNN typology prediction to boost/add detections
+        gnn_pred = self._get_gnn_prediction(tx_id, sender, recipient, amount, timestamp, features)
+        
+        gnn_enabled = gnn_pred is not None
+        gnn_predicted_typology = "Unknown"
+        gnn_typology_confidence = 0.0
+        gnn_has_graph_context = False
+        gnn_neighbor_count = 0
+        gnn_boost_applied = False
+        
+        if gnn_pred is not None:
+            gnn_predicted_typology = gnn_pred.typology_name
+            gnn_typology_confidence = gnn_pred.typology_confidence
+            gnn_has_graph_context = gnn_pred.has_graph_context
+            gnn_neighbor_count = gnn_pred.num_neighbors
+            
+            # Apply GNN boost if confidence is high
+            if gnn_typology_confidence > 0.5 and gnn_pred.primary_typology < 15:
+                gnn_typology = self.GNN_TYPOLOGY_MAP.get(gnn_pred.primary_typology)
+                
+                if gnn_typology:
+                    # Check if this typology was already detected
+                    existing_detection = next(
+                        (d for d in detections if d.typology == gnn_typology), None
+                    )
+                    
+                    if existing_detection:
+                        # Boost confidence of existing detection
+                        boost_factor = 1.0 + (gnn_typology_confidence * 0.3)  # Up to 30% boost
+                        existing_detection.confidence = min(1.0, existing_detection.confidence * boost_factor)
+                        existing_detection.triggered_rules.append(
+                            f"GNN_BOOST: GraphSAGE confirmed pattern (conf: {gnn_typology_confidence:.2f})"
+                        )
+                        existing_detection.evidence["gnn_confidence"] = gnn_typology_confidence
+                        existing_detection.evidence["gnn_neighbors"] = gnn_neighbor_count
+                        gnn_boost_applied = True
+                    elif gnn_typology_confidence > 0.65:
+                        # Add new detection from GNN (high confidence only)
+                        gnn_detection = TypologyDetection(
+                            typology=gnn_typology,
+                            confidence=gnn_typology_confidence * 0.8,  # Slightly discount pure GNN
+                            triggered_rules=[
+                                f"GNN_DETECTION: GraphSAGE identified pattern from transaction graph",
+                                f"Graph context: {gnn_neighbor_count} neighbor transactions analyzed"
+                            ],
+                            evidence={
+                                "gnn_confidence": gnn_typology_confidence,
+                                "gnn_neighbors": gnn_neighbor_count,
+                                "detection_source": "graph_neural_network"
+                            },
+                            severity=self._confidence_to_severity(gnn_typology_confidence * 0.8)
+                        )
+                        detections.append(gnn_detection)
+                        gnn_boost_applied = True
+        
+        # Calculate aggregate risk score (with GNN contribution)
         aggregate_risk = self._calculate_aggregate_risk(detections, features)
+        
+        # Boost aggregate risk if GNN has high confidence
+        if gnn_enabled and gnn_has_graph_context and gnn_typology_confidence > 0.6:
+            gnn_risk_boost = gnn_typology_confidence * 10  # Up to 10 points
+            aggregate_risk = min(100, aggregate_risk + gnn_risk_boost)
         
         # Determine primary typology (highest confidence + market impact)
         primary = None
@@ -274,6 +430,13 @@ class FraudTypologyDetector:
             aggregate_risk_score=aggregate_risk,
             analysis_time_ms=analysis_time,
             transaction_id=tx_id,
+            # GNN Fusion Results
+            gnn_enabled=gnn_enabled,
+            gnn_predicted_typology=gnn_predicted_typology,
+            gnn_typology_confidence=gnn_typology_confidence,
+            gnn_has_graph_context=gnn_has_graph_context,
+            gnn_neighbor_count=gnn_neighbor_count,
+            gnn_boost_applied=gnn_boost_applied,
         )
     
     # ═══════════════════════════════════════════════════════════════════════════

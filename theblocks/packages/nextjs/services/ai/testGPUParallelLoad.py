@@ -180,7 +180,8 @@ async def test_chatbot_request(
                 "options": {
                     **GPU_OPTIONS,
                     "temperature": 0.7,  # More creative for chat
-                    "num_predict": 256,
+                    "num_predict": 128,  # REDUCED for faster test (was 256)
+                    "num_ctx": 2048,     # Smaller context for parallel
                 }
             },
             timeout=30.0

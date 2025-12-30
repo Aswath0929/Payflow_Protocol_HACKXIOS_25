@@ -154,7 +154,7 @@ class SignedAnalysis:
     pattern_score: int
     graph_score: int
     timing_score: int
-    ai_score: int  # GPT-4 analysis score
+    ai_score: int  # Qwen3 MoE analysis score
     
     # Neural Network outputs (PRIMARY)
     neural_net_score: int  # Local neural network risk score
@@ -186,8 +186,41 @@ class SignedAnalysis:
     model_version: str
     analysis_time_ms: float
     
+    # GNN Fusion outputs (GRAPH-AWARE) - Optional with defaults
+    gnn_enabled: bool = False  # Whether GNN fusion is active
+    gnn_risk_level: str = "unknown"  # GNN risk classification
+    gnn_risk_confidence: float = 0.0  # GNN prediction confidence
+    gnn_typology: str = "unknown"  # GNN-predicted fraud typology
+    gnn_typology_confidence: float = 0.0  # Typology confidence
+    gnn_has_graph_context: bool = False  # Whether transaction had graph neighbors
+    gnn_neighbor_count: int = 0  # Number of transaction neighbors in graph
+    
     def to_dict(self) -> Dict:
-        return asdict(self)
+        """Convert to JSON-serializable dictionary, handling numpy types."""
+        import numpy as np
+        
+        result = asdict(self)
+        
+        # Convert numpy types to Python native types for JSON serialization
+        def convert_numpy(obj):
+            if isinstance(obj, dict):
+                return {k: convert_numpy(v) for k, v in obj.items()}
+            elif isinstance(obj, list):
+                return [convert_numpy(item) for item in obj]
+            elif isinstance(obj, np.bool_):
+                return bool(obj)
+            elif isinstance(obj, (np.integer, np.int64, np.int32)):
+                return int(obj)
+            elif isinstance(obj, (np.floating, np.float64, np.float32)):
+                return float(obj)
+            elif isinstance(obj, np.ndarray):
+                return obj.tolist()
+            elif hasattr(obj, 'item'):  # Generic numpy scalar
+                return obj.item()
+            else:
+                return obj
+        
+        return convert_numpy(result)
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #                         LOCAL ML MODELS (Fast Path)
@@ -196,7 +229,7 @@ class SignedAnalysis:
 class LocalMLEngine:
     """
     Local ML models for fast fraud detection.
-    These provide immediate results while GPT-4 does deep analysis.
+    These provide immediate results while Qwen3 MoE does deep analysis.
     """
     
     def __init__(self):
@@ -319,14 +352,14 @@ class LocalMLEngine:
 #                         QWEN3 LOCAL LLM INTEGRATION (Deep Analysis)
 # ═══════════════════════════════════════════════════════════════════════════════
 
-class GPT4Analyzer:
+class Qwen3Analyzer:
     """
-    UPGRADED: Now uses Qwen3 Local LLM (100% Offline - RTX 4070 GPU)!
+    Qwen3 8B MoE Local LLM (100% Offline - RTX 4070 GPU)
     
-    Provides GPT-4 level reasoning for fraud detection,
+    Provides Qwen3 MoE reasoning for fraud detection,
     running entirely on your local GPU. No cloud API needed.
     
-    Model: Qwen3 (Latest 2025 release from Alibaba)
+    Model: Qwen3 8B MoE (Latest 2025 release from Alibaba)
     VRAM: ~5GB on RTX 4070 (8GB available)
     Inference: <500ms per analysis
     """
@@ -359,12 +392,22 @@ Be precise, specific, and cite the exact patterns that concern you."""
         self.enabled = False
         self.is_local = True
         
-        # Initialize Qwen3 in background
-        asyncio.create_task(self._init_qwen3())
+        # Initialize Qwen3 synchronously (avoid event loop issues)
+        try:
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                # Schedule for later if loop is running
+                asyncio.create_task(self._init_qwen3())
+            else:
+                # Run synchronously if no loop
+                loop.run_until_complete(self._init_qwen3())
+        except RuntimeError:
+            # No event loop exists - create one
+            asyncio.run(self._init_qwen3())
         
-        logger.info("GPT4Analyzer upgraded to Qwen3 Local LLM")
+        logger.info("Qwen3Analyzer initialized - Local MoE LLM")
         logger.info(f"  Model: {Qwen3Config.MODEL_NAME}")
-        logger.info("  Running 100% offline on your GPU!")
+        logger.info("  Running 100% offline on RTX 4070 GPU!")
     
     async def _init_qwen3(self):
         """Initialize Qwen3 asynchronously."""
@@ -526,26 +569,31 @@ class CryptoSigner:
 class SecureAIOracle:
     """
     Production-grade AI Oracle combining:
-    1. LOCAL NEURAL NETWORK for 100% offline detection (PRIMARY)
+    1. LOCAL NEURAL NETWORK + GNN FUSION for 100% offline detection (PRIMARY)
     2. Local ML (Isolation Forest + DBSCAN) for anomaly detection
-    3. GPT-4 for intelligent deep analysis (SECONDARY/ENHANCEMENT)
+    3. Qwen3 MoE for intelligent deep analysis (SECONDARY/ENHANCEMENT)
     4. Cryptographic signatures for on-chain verification
     
+    GNN FUSION Architecture:
+    - GraphSAGE embeddings fused with MLP features
+    - 15-class fraud typology detection from transaction graph
+    - Neighbor-aware pattern recognition
+    
     The system works completely offline using neural networks.
-    GPT-4 is OPTIONAL and only enhances the analysis when available.
+    Qwen3 MoE is OPTIONAL and only enhances the analysis when available.
     """
     
-    MODEL_VERSION = "PayFlow-SecureAI-v2.1.0-NeuralNet"
+    MODEL_VERSION = "PayFlow-SecureAI-v3.0.0-GNN-Fusion"
     
     def __init__(self):
-        # PRIMARY: Local Neural Network (100% Offline)
+        # PRIMARY: Local Neural Network + GNN Fusion (100% Offline)
         self.neural_net = LocalNeuralNetworkEngine()
         
         # SECONDARY: Traditional ML Engine
         self.ml_engine = LocalMLEngine()
         
-        # Qwen3 Local LLM (100% Offline - RTX 4070 GPU)
-        self.gpt4 = GPT4Analyzer()  # Actually uses Qwen3 now!
+        # Qwen3 MoE Local LLM (100% Offline - RTX 4070 GPU)
+        self.qwen3 = Qwen3Analyzer()
         
         # Cryptographic signer
         self.signer = CryptoSigner(Config.ORACLE_PRIVATE_KEY if Config.ORACLE_PRIVATE_KEY else None)
@@ -563,9 +611,11 @@ class SecureAIOracle:
             "total_blocked": 0,
             "total_flagged": 0,
             "avg_latency_ms": 0,
-            "qwen3_calls": 0,  # Renamed from gpt4_calls
+            "qwen3_calls": 0,  # Qwen3 MoE analysis calls
             "cache_hits": 0,
             "neural_net_predictions": 0,
+            "gnn_predictions": 0,  # NEW: GNN fusion predictions
+            "gnn_graph_context_hits": 0,  # NEW: Predictions with graph context
         }
         
         # Blacklist/Whitelist
@@ -577,8 +627,8 @@ class SecureAIOracle:
         
         logger.info(f"SecureAIOracle initialized - Version: {self.MODEL_VERSION}")
         logger.info(f"Oracle signer address: {self.signer.address}")
-        logger.info(f"Neural Network: ENABLED (100% Offline)")
-        logger.info(f"Qwen3 Local LLM: {'ENABLED (RTX 4070 GPU)' if self.gpt4.enabled else 'STARTING... Run: ollama serve && ollama pull qwen3:8b'}")
+        logger.info(f"Neural Network + GNN Fusion: ENABLED (100% Offline)")
+        logger.info(f"Qwen3 Local LLM: {'ENABLED (RTX 4070 GPU)' if self.qwen3.enabled else 'STARTING... Run: ollama serve && ollama pull qwen3:8b'}")
     
     def get_or_create_profile(self, address: str) -> WalletProfile:
         """Get or create wallet profile."""
@@ -594,7 +644,7 @@ class SecureAIOracle:
         recipient: str,
         amount: float,
         timestamp: Optional[int] = None,
-        use_gpt4: bool = True
+        use_qwen3: bool = True
     ) -> SignedAnalysis:
         """
         Comprehensive transaction analysis with AI + ML + Signatures.
@@ -602,7 +652,7 @@ class SecureAIOracle:
         Pipeline:
         1. Check cache
         2. Local ML scoring (fast)
-        3. GPT-4 deep analysis (if enabled)
+        3. Qwen3 MoE deep analysis (if enabled)
         4. Combine scores
         5. Sign result
         6. Return signed analysis
@@ -629,16 +679,23 @@ class SecureAIOracle:
                 "Address is blacklisted", start_time
             )
         
-        # ═══ PHASE 1: NEURAL NETWORK ANALYSIS (100% Offline - PRIMARY) ═══
+        # ═══ PHASE 1: NEURAL NETWORK + GNN FUSION ANALYSIS (100% Offline - PRIMARY) ═══
         neural_result: NeuralNetworkPrediction = self.neural_net.predict(
             sender=sender,
             recipient=recipient,
             amount=amount,
-            timestamp=timestamp
+            timestamp=timestamp,
+            tx_id=transaction_id  # Pass tx_id for GNN graph context
         )
         self.stats["neural_net_predictions"] += 1
         
-        logger.info(f"Neural Network: Risk={neural_result.risk_score}, Level={neural_result.risk_level}")
+        # Track GNN fusion stats
+        if neural_result.gnn_enabled:
+            self.stats["gnn_predictions"] += 1
+            if neural_result.gnn_has_graph_context:
+                self.stats["gnn_graph_context_hits"] += 1
+        
+        logger.info(f"Neural Network + GNN: Risk={neural_result.risk_score}, Level={neural_result.risk_level}, GNN={neural_result.gnn_enabled}, GraphContext={neural_result.gnn_has_graph_context}")
         
         # ═══ PHASE 2: Local ML Scoring (Fast Path - SECONDARY) ═══
         local_scores = await self._local_ml_analysis(
@@ -651,11 +708,11 @@ class SecureAIOracle:
         
         # ═══ PHASE 3: Qwen3 Local LLM Analysis (100% Offline - RTX 4070) ═══
         qwen3_result = None
-        if use_gpt4 and self.gpt4.enabled:
+        if use_qwen3 and self.qwen3.enabled:
             # Only call Qwen3 for non-trivial transactions OR when neural net flags it
             preliminary_score = sum([v for k, v in local_scores.items() if isinstance(v, (int, float)) and not isinstance(v, bool)]) / len(local_scores)
             if neural_result.is_anomaly or preliminary_score > 30 or amount > 5000:
-                qwen3_result = await self.gpt4.analyze(
+                qwen3_result = await self.qwen3.analyze(
                     transaction_id, sender, recipient, amount,
                     sender_profile, recipient_profile, local_scores
                 )
@@ -692,6 +749,14 @@ class SecureAIOracle:
             neural_net_risk_level=neural_result.risk_level,
             neural_net_is_anomaly=neural_result.is_anomaly,
             neural_net_explanation=neural_result.explanation,
+            # GNN Fusion outputs (GRAPH-AWARE)
+            gnn_enabled=neural_result.gnn_enabled,
+            gnn_risk_level=neural_result.gnn_risk_level,
+            gnn_risk_confidence=neural_result.gnn_risk_confidence,
+            gnn_typology=neural_result.gnn_typology,
+            gnn_typology_confidence=neural_result.gnn_typology_confidence,
+            gnn_has_graph_context=neural_result.gnn_has_graph_context,
+            gnn_neighbor_count=neural_result.gnn_neighbor_count,
             # Traditional ML outputs
             isolation_forest_score=local_scores["isolation_forest"],
             cluster_anomaly=local_scores.get("cluster_anomaly", False),
@@ -735,7 +800,7 @@ class SecureAIOracle:
             f"Score={signed_analysis.overall_score}, "
             f"Level={signed_analysis.risk_level}, "
             f"Time={analysis_time:.1f}ms, "
-            f"GPT4={gpt4_result is not None}"
+            f"Qwen3={qwen3_result is not None}"
         )
         
         return signed_analysis
@@ -830,13 +895,13 @@ class SecureAIOracle:
         timestamp: int,
         neural_result: NeuralNetworkPrediction,
         local_scores: Dict,
-        gpt4_result: Optional[Dict]
+        qwen3_result: Optional[Dict]
     ) -> Dict:
         """
-        Combine Neural Network + Local ML + GPT-4 scores.
+        Combine Neural Network + Local ML + Qwen3 MoE scores.
         Neural Network is PRIMARY (50% weight).
         Local ML is SECONDARY (30% weight).
-        GPT-4 is ENHANCEMENT (20% weight) - only when available.
+        Qwen3 MoE is ENHANCEMENT (20% weight) - only when available.
         """
         
         # Weight allocation - Neural Network is PRIMARY
@@ -848,7 +913,7 @@ class SecureAIOracle:
             "graph": 0.04,
             "timing": 0.02,
             "isolation_forest": 0.02,
-            "gpt4": 0.20,  # OPTIONAL enhancement
+            "qwen3": 0.20,  # OPTIONAL Qwen3 MoE enhancement
         }
         
         # Calculate weighted score
@@ -865,12 +930,12 @@ class SecureAIOracle:
         score += local_scores["timing"] * weights["timing"]
         score += local_scores["isolation_forest"] * 100 * weights["isolation_forest"]
         
-        # OPTIONAL: GPT-4 Enhancement (20%)
-        if gpt4_result:
-            score += gpt4_result["risk_score"] * weights["gpt4"]
+        # OPTIONAL: Qwen3 MoE Enhancement (20%)
+        if qwen3_result:
+            score += qwen3_result["risk_score"] * weights["qwen3"]
         else:
-            # Redistribute GPT-4 weight to Neural Network (stays offline)
-            score = score / (1 - weights["gpt4"])
+            # Redistribute Qwen3 weight to Neural Network (stays offline)
+            score = score / (1 - weights["qwen3"])
         
         overall_score = int(min(100, max(0, score)))
         
@@ -901,8 +966,8 @@ class SecureAIOracle:
             alerts.append(AlertType.PATTERN_ANOMALY.value)
         if neural_result.is_anomaly:
             alerts.append(AlertType.AI_FLAGGED.value)
-        if gpt4_result and gpt4_result.get("alerts"):
-            alerts.extend(gpt4_result["alerts"][:3])
+        if qwen3_result and qwen3_result.get("alerts"):
+            alerts.extend(qwen3_result["alerts"][:3])
         
         return {
             "transaction_id": transaction_id,
@@ -925,9 +990,9 @@ class SecureAIOracle:
         amount: float,
         timestamp: int,
         local_scores: Dict,
-        gpt4_result: Optional[Dict]
+        qwen3_result: Optional[Dict]
     ) -> Dict:
-        """Combine local ML and GPT-4 scores (legacy fallback)."""
+        """Combine local ML and Qwen3 scores (legacy fallback)."""
         
         # Weight allocation
         weights = {
@@ -937,7 +1002,7 @@ class SecureAIOracle:
             "graph": 0.15,
             "timing": 0.05,
             "isolation_forest": 0.10,
-            "gpt4": 0.15,
+            "qwen3": 0.15,
         }
         
         # Calculate weighted score
@@ -949,11 +1014,11 @@ class SecureAIOracle:
         score += local_scores["timing"] * weights["timing"]
         score += local_scores["isolation_forest"] * 100 * weights["isolation_forest"]
         
-        if gpt4_result:
-            score += gpt4_result["risk_score"] * weights["gpt4"]
+        if qwen3_result:
+            score += qwen3_result["risk_score"] * weights["qwen3"]
         else:
-            # Redistribute GPT-4 weight to local scores
-            score = score / (1 - weights["gpt4"])
+            # Redistribute Qwen3 weight to local scores
+            score = score / (1 - weights["qwen3"])
         
         overall_score = int(min(100, max(0, score)))
         
@@ -981,8 +1046,8 @@ class SecureAIOracle:
             alerts.append(AlertType.SANCTIONED_INTERACTION.value)
         if local_scores["cluster_anomaly"]:
             alerts.append(AlertType.PATTERN_ANOMALY.value)
-        if gpt4_result and gpt4_result.get("alerts"):
-            alerts.extend(gpt4_result["alerts"][:3])
+        if qwen3_result and qwen3_result.get("alerts"):
+            alerts.extend(qwen3_result["alerts"][:3])
         
         return {
             "transaction_id": transaction_id,
@@ -1052,19 +1117,19 @@ class SecureAIOracle:
     def _build_combined_explanation(
         self,
         neural_result: NeuralNetworkPrediction,
-        gpt4_result: Optional[Dict]
+        qwen3_result: Optional[Dict]
     ) -> str:
         """
-        Build combined explanation from Neural Network (primary) + GPT-4 (optional).
+        Build combined explanation from Neural Network (primary) + Qwen3 MoE (optional).
         """
         explanations = []
         
         # Neural Network explanation (PRIMARY - always present)
         explanations.append(f"🧠 Local Neural Network ({neural_result.confidence:.0%} confidence): {neural_result.explanation}")
         
-        # GPT-4 explanation (OPTIONAL enhancement)
-        if gpt4_result and gpt4_result.get("explanation"):
-            explanations.append(f"🤖 GPT-4 Enhancement: {gpt4_result['explanation']}")
+        # Qwen3 MoE explanation (OPTIONAL enhancement)
+        if qwen3_result and qwen3_result.get("explanation"):
+            explanations.append(f"🤖 Qwen3 MoE Enhancement: {qwen3_result['explanation']}")
         else:
             explanations.append("📡 Mode: 100% Offline (Neural Network + Local ML only)")
         
@@ -1112,7 +1177,7 @@ class SecureAIOracle:
             "whitelist_size": len(self.whitelist),
             "model_version": self.MODEL_VERSION,
             "oracle_address": self.signer.address,
-            "gpt4_enabled": self.gpt4.enabled,
+            "qwen3_enabled": self.qwen3.enabled,
             "ml_trained": self.ml_engine.is_trained,
         }
 

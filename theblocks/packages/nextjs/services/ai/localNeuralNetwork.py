@@ -6,10 +6,16 @@
 ║   No internet required - Runs entirely on local hardware                              ║
 ║                                                                                       ║
 ║   Architecture:                                                                       ║
+║   • GraphSAGE Graph Neural Network (FUSED - neighbor-aware embeddings)               ║
 ║   • Multi-Layer Perceptron (MLP) for pattern recognition                             ║
 ║   • LSTM-like sequence modeling via rolling features                                 ║
 ║   • Autoencoder for anomaly detection                                                ║
 ║   • Ensemble voting for robust predictions                                           ║
+║                                                                                       ║
+║   GNN FUSION Architecture:                                                            ║
+║   • Standard 13 features + 64-dim GNN embeddings = 77 fused features                 ║
+║   • GraphSAGE aggregates neighbor transaction patterns                               ║
+║   • Fallback to standard features when no graph context                              ║
 ║                                                                                       ║
 ║   Features:                                                                           ║
 ║   • Self-training on transaction patterns                                            ║
@@ -31,6 +37,18 @@ import os
 import logging
 from collections import deque
 from datetime import datetime
+
+# Import GNN Engine for fusion (with fallback)
+try:
+    from .graphNeuralNetwork import FusedGNNEngine, get_gnn_engine, GNNPrediction
+    GNN_AVAILABLE = True
+except ImportError:
+    try:
+        from graphNeuralNetwork import FusedGNNEngine, get_gnn_engine, GNNPrediction
+        GNN_AVAILABLE = True
+    except ImportError:
+        GNN_AVAILABLE = False
+        GNNPrediction = None
 
 logger = logging.getLogger('LocalNeuralNetwork')
 
@@ -420,7 +438,7 @@ class TransactionFeatures:
 
 @dataclass 
 class NeuralNetworkPrediction:
-    """Prediction from the ensemble neural network."""
+    """Prediction from the ensemble neural network (including GNN fusion)."""
     risk_score: int  # 0-100
     risk_level: str  # SAFE, LOW, MEDIUM, HIGH, CRITICAL
     is_anomaly: bool
@@ -433,9 +451,19 @@ class NeuralNetworkPrediction:
     autoencoder_anomaly: bool
     rule_based_score: int
     
+    # GNN FUSION Results (NEW)
+    gnn_enabled: bool = False
+    gnn_risk_level: int = 0
+    gnn_risk_confidence: float = 0.0
+    gnn_typology: str = "Unknown"
+    gnn_typology_confidence: float = 0.0
+    gnn_has_graph_context: bool = False
+    gnn_neighbor_count: int = 0
+    gnn_embedding: np.ndarray = field(default_factory=lambda: np.zeros(64))
+    
     # Explanation
-    explanation: str
-    flags: List[str]
+    explanation: str = ""
+    flags: List[str] = field(default_factory=list)
 
 
 class LocalNeuralNetworkEngine:
@@ -445,15 +473,27 @@ class LocalNeuralNetworkEngine:
     No external API calls - runs 100% offline on local hardware.
     
     Components:
-    1. MLP Classifier - Supervised fraud classification
-    2. Autoencoder - Unsupervised anomaly detection
-    3. Rule-Based Engine - Known fraud patterns
-    4. Ensemble Voter - Combines all predictions
+    1. GNN Fusion Engine - Graph Neural Network for neighbor-aware embeddings (NEW)
+    2. MLP Classifier - Supervised fraud classification
+    3. Autoencoder - Unsupervised anomaly detection
+    4. Rule-Based Engine - Known fraud patterns
+    5. Ensemble Voter - Combines all predictions with GNN weighting
+    
+    GNN FUSION Architecture:
+    - Fuses 13 standard features with 64-dim GNN embeddings
+    - GraphSAGE aggregates transaction graph patterns
+    - Provides 15-class fraud typology classification
+    - Falls back gracefully when graph context unavailable
     """
     
     def __init__(self, model_path: Optional[str] = None):
         self.mlp = FraudDetectionMLP()
         self.autoencoder = AnomalyAutoencoder()
+        
+        # GNN FUSION Engine (NEW)
+        self.gnn_engine = None
+        self.gnn_enabled = False
+        self._initialize_gnn()
         
         # Historical data for training
         self.training_buffer: List[Tuple[np.ndarray, np.ndarray]] = []
@@ -471,7 +511,7 @@ class LocalNeuralNetworkEngine:
         }
         
         # Model version for on-chain verification
-        self.model_version = "PayFlow-NeuralNet-v1.0.0"
+        self.model_version = "PayFlow-NeuralNet-v2.0.0-GNN"
         
         # Load pre-trained model if available
         if model_path and os.path.exists(model_path):
@@ -555,6 +595,58 @@ class LocalNeuralNetworkEngine:
         self.autoencoder.train_batch(X_normal, learning_rate=0.01, epochs=50)
         
         logger.info("Bootstrap training completed")
+    
+    def _initialize_gnn(self):
+        """Initialize GNN Fusion Engine for graph-aware predictions."""
+        if not GNN_AVAILABLE:
+            logger.info("GNN module not available - using standard features only")
+            self.gnn_enabled = False
+            return
+        
+        try:
+            self.gnn_engine = get_gnn_engine()
+            self.gnn_enabled = self.gnn_engine.enabled
+            if self.gnn_enabled:
+                logger.info("GNN Fusion Engine ENABLED - GraphSAGE embeddings active")
+                logger.info(f"  Device: {self.gnn_engine.device}")
+                logger.info(f"  Graph nodes: {len(self.gnn_engine.transaction_graph.nodes)}")
+            else:
+                logger.info("GNN Fusion Engine initialized but not enabled (PyTorch/PyG required)")
+        except Exception as e:
+            logger.warning(f"Failed to initialize GNN engine: {e}")
+            self.gnn_enabled = False
+    
+    def get_gnn_prediction(
+        self, 
+        tx_id: str,
+        sender: str, 
+        recipient: str, 
+        amount: float, 
+        timestamp: float,
+        features: TransactionFeatures
+    ):
+        """
+        Get GNN prediction with graph embeddings.
+        
+        Returns GNNPrediction or None if GNN not available.
+        """
+        if not self.gnn_enabled or self.gnn_engine is None:
+            return None
+        
+        try:
+            feature_array = features.to_array().flatten()
+            gnn_pred = self.gnn_engine.predict(
+                tx_id=tx_id,
+                sender=sender,
+                recipient=recipient,
+                amount=amount,
+                timestamp=timestamp,
+                standard_features=feature_array
+            )
+            return gnn_pred
+        except Exception as e:
+            logger.warning(f"GNN prediction failed: {e}")
+            return None
     
     def extract_features(self, sender: str, recipient: str, 
                         amount: float, timestamp: float) -> TransactionFeatures:
@@ -666,14 +758,31 @@ class LocalNeuralNetworkEngine:
         return min(score, 100), flags
     
     def predict(self, sender: str, recipient: str, 
-                amount: float, timestamp: Optional[float] = None) -> NeuralNetworkPrediction:
+                amount: float, timestamp: Optional[float] = None,
+                tx_id: Optional[str] = None) -> NeuralNetworkPrediction:
         """
-        Make fraud prediction using ensemble of neural networks.
+        Make fraud prediction using ensemble of neural networks WITH GNN FUSION.
         
-        Returns prediction with risk score, level, and explanation.
+        GNN FUSION Pipeline:
+        1. Extract 13 standard features
+        2. Get 64-dim GNN embeddings (if graph context available)
+        3. Fused features = [13 standard] + [64 GNN] = 77 features
+        4. MLP prediction on standard features
+        5. GNN provides typology + additional risk signal
+        6. Ensemble combines: MLP (35%), Autoencoder (20%), Rules (25%), GNN (20%)
+        
+        Returns prediction with risk score, level, explanation, and GNN results.
         """
+        import hashlib
+        
         if timestamp is None:
             timestamp = datetime.now().timestamp()
+        
+        # Generate tx_id if not provided
+        if tx_id is None:
+            tx_id = hashlib.sha256(
+                f"{sender}:{recipient}:{amount}:{timestamp}".encode()
+            ).hexdigest()[:16]
         
         # Extract features
         features = self.extract_features(sender, recipient, amount, timestamp)
@@ -688,16 +797,68 @@ class LocalNeuralNetworkEngine:
         # 3. Rule-based Check
         rule_score, flags = self.rule_based_check(features)
         
-        # 4. Ensemble Voting
-        # Weighted combination: MLP (40%), Autoencoder (30%), Rules (30%)
+        # 4. GNN FUSION Prediction (NEW)
+        gnn_pred = self.get_gnn_prediction(
+            tx_id=tx_id,
+            sender=sender,
+            recipient=recipient,
+            amount=amount,
+            timestamp=timestamp,
+            features=features
+        )
+        
+        # Extract GNN results
+        gnn_enabled = gnn_pred is not None
+        gnn_risk_level = 0
+        gnn_risk_confidence = 0.0
+        gnn_typology = "Unknown"
+        gnn_typology_confidence = 0.0
+        gnn_has_graph_context = False
+        gnn_neighbor_count = 0
+        gnn_embedding = np.zeros(64)
+        gnn_score = 0
+        
+        if gnn_pred is not None:
+            gnn_risk_level = gnn_pred.risk_level
+            gnn_risk_confidence = gnn_pred.risk_confidence
+            gnn_typology = gnn_pred.typology_name
+            gnn_typology_confidence = gnn_pred.typology_confidence
+            gnn_has_graph_context = gnn_pred.has_graph_context
+            gnn_neighbor_count = gnn_pred.num_neighbors
+            gnn_embedding = gnn_pred.graph_embedding
+            
+            # GNN risk score contribution (0-100)
+            gnn_score = gnn_risk_level * 25  # 0-3 -> 0-75, scale to 100
+            
+            # If GNN has strong typology confidence, add to flags
+            if gnn_typology_confidence > 0.5 and gnn_typology != "Unknown":
+                flags.append(f"GNN_TYPOLOGY: {gnn_typology} (conf: {gnn_typology_confidence:.2f})")
+        
+        # 5. FUSED Ensemble Voting
+        # New weights with GNN fusion:
+        # - MLP: 35% (reduced from 40%)
+        # - Autoencoder: 20% (reduced from 30%)
+        # - Rules: 25% (reduced from 30%)
+        # - GNN: 20% (new)
+        
         mlp_score = mlp_risk_level * 25  # 0-3 -> 0-75
         ae_contribution = min(ae_score * 100, 50) if ae_anomaly else 0
         
-        combined_score = int(
-            0.4 * mlp_score + 
-            0.3 * ae_contribution + 
-            0.3 * rule_score
-        )
+        if gnn_enabled and gnn_has_graph_context:
+            # Full ensemble with GNN
+            combined_score = int(
+                0.35 * mlp_score + 
+                0.20 * ae_contribution + 
+                0.25 * rule_score +
+                0.20 * gnn_score
+            )
+        else:
+            # Standard ensemble without GNN (redistribute weights)
+            combined_score = int(
+                0.40 * mlp_score + 
+                0.30 * ae_contribution + 
+                0.30 * rule_score
+            )
         combined_score = min(max(combined_score, 0), 100)
         
         # Determine risk level
@@ -715,12 +876,18 @@ class LocalNeuralNetworkEngine:
         # Is anomaly if any model flags it
         is_anomaly = ae_anomaly or mlp_risk_level >= 2 or rule_score >= 50
         
-        # Calculate overall confidence
-        confidence = (mlp_confidence + (1.0 if not ae_anomaly else 0.5)) / 2
+        # Calculate overall confidence (boost with GNN if available)
+        if gnn_enabled and gnn_has_graph_context:
+            confidence = (mlp_confidence + gnn_risk_confidence + (1.0 if not ae_anomaly else 0.5)) / 3
+        else:
+            confidence = (mlp_confidence + (1.0 if not ae_anomaly else 0.5)) / 2
         
-        # Generate explanation
+        # Generate explanation with GNN insights
         explanation = self._generate_explanation(
-            risk_level, combined_score, mlp_risk_level, ae_anomaly, flags
+            risk_level, combined_score, mlp_risk_level, ae_anomaly, flags,
+            gnn_enabled=gnn_enabled,
+            gnn_typology=gnn_typology,
+            gnn_has_context=gnn_has_graph_context
         )
         
         # Update wallet profile for future predictions
@@ -736,16 +903,31 @@ class LocalNeuralNetworkEngine:
             autoencoder_score=ae_score,
             autoencoder_anomaly=ae_anomaly,
             rule_based_score=rule_score,
+            # GNN Fusion Results (NEW)
+            gnn_enabled=gnn_enabled,
+            gnn_risk_level=gnn_risk_level,
+            gnn_risk_confidence=gnn_risk_confidence,
+            gnn_typology=gnn_typology,
+            gnn_typology_confidence=gnn_typology_confidence,
+            gnn_has_graph_context=gnn_has_graph_context,
+            gnn_neighbor_count=gnn_neighbor_count,
+            gnn_embedding=gnn_embedding,
             explanation=explanation,
             flags=flags,
         )
     
     def _generate_explanation(self, risk_level: str, score: int, 
                              mlp_level: int, ae_anomaly: bool, 
-                             flags: List[str]) -> str:
-        """Generate human-readable explanation."""
+                             flags: List[str],
+                             gnn_enabled: bool = False,
+                             gnn_typology: str = "Unknown",
+                             gnn_has_context: bool = False) -> str:
+        """Generate human-readable explanation with GNN insights."""
         if risk_level == "SAFE":
-            return "Transaction appears normal. No anomalous patterns detected by neural network ensemble."
+            base = "Transaction appears normal. No anomalous patterns detected by neural network ensemble."
+            if gnn_enabled and gnn_has_context:
+                return base + " Graph analysis confirms no suspicious neighbor activity."
+            return base
         
         explanation_parts = [f"Risk Score: {score}/100."]
         
@@ -754,6 +936,13 @@ class LocalNeuralNetworkEngine:
         
         if ae_anomaly:
             explanation_parts.append("Autoencoder detected anomalous transaction structure.")
+        
+        # GNN Insights (NEW)
+        if gnn_enabled and gnn_has_context:
+            if gnn_typology != "Unknown":
+                explanation_parts.append(f"Graph Neural Network identified potential {gnn_typology} pattern based on transaction neighborhood.")
+            else:
+                explanation_parts.append("Graph analysis reveals suspicious neighbor transaction patterns.")
         
         if flags:
             explanation_parts.append(f"Flags: {', '.join(flags)}")

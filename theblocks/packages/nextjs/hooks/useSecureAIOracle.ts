@@ -137,7 +137,7 @@ type AIProvider = "openai" | "anthropic" | "local";
  */
 export function useSecureAIOracle(
   contractAddress: string,
-  oracleApiUrl: string = "http://localhost:8001"
+  oracleApiUrl: string = "http://localhost:8000"
 ) {
   const { address } = useAccount();
   const { writeContractAsync } = useWriteContract();
@@ -171,12 +171,9 @@ export function useSecureAIOracle(
       data: TransactionData,
       provider: AIProvider = "local"
     ): Promise<SignedAnalysisResult> => {
-      const endpoint =
-        provider === "local"
-          ? "/analyze/local"
-          : provider === "openai"
-          ? "/analyze/openai"
-          : "/analyze/anthropic";
+      // All providers now use the unified /analyze endpoint
+      // Qwen3 MoE is used as the AI backend (GPT-4 removed)
+      const endpoint = "/analyze";
 
       const response = await fetch(`${oracleApiUrl}${endpoint}`, {
         method: "POST",

@@ -386,3 +386,63 @@
 .link:hover {
   opacity: 80%;
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   QWEN3 MOE NEURAL NETWORK ANIMATIONS - AI Fraud Detection Theme
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Neural scan line moving vertically */
+@keyframes neural-scan {
+  0%, 100% {
+    top: 0%;
+  }
+  50% {
+    top: 100%;
+  }
+}
+
+/* Grid scrolling for tech background */
+@keyframes grid-scroll {
+  0% {
+    transform: translateY(0);
+  }
+  100% {
+    transform: translateY(60px);
+  }
+}
+
+/* Chain flow for blockchain theme */
+@keyframes chain-flow {
+  0% {
+    transform: translateY(0);
+  }
+  100% {
+    transform: translateY(80px);
+  }
+}
+
+/* Matrix rain for debug theme */
+@keyframes matrix-fall {
+  0% {
+    transform: translateY(-100%);
+  }
+  100% {
+    transform: translateY(100vh);
+  }
+}
+
+/* Floating animation */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  25% {
+    transform: translateY(-10px) rotate(1deg);
+  }
+  50% {
+    transform: translateY(-20px) rotate(0deg);
+  }
+  75% {
+    transform: translateY(-10px) rotate(-1deg);
+  }
+}

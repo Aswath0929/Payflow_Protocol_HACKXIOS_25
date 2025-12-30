@@ -596,7 +596,7 @@ Our **Expert AI Oracle v3.0** is a production-grade, enterprise fraud detection 
 │  ┌───────────────────────────────────────────────────────────────────────┐  │
 │  │  MODEL 3: QWEN3:8B LOCAL LLM (30% weight) - ~3s inference            │  │
 │  │  • Model: Qwen3:8b via Ollama (Latest 2025 Alibaba release)          │  │
-│  │  • 🔥 GPT-4 level reasoning running 100% locally on GPU              │  │
+│  │  • 🔥 Advanced reasoning running 100% locally on GPU                │  │
 │  │  • Natural language fraud analysis & compliance explanations         │  │
 │  │  • Thinking mode: Deep reasoning with <think> chain-of-thought       │  │
 │  │  • 🔒 Complete data privacy - NEVER touches the internet             │  │
@@ -659,7 +659,7 @@ ollama list   # Should show qwen3:8b
 
 **Why Qwen3:8b?**
 - 🆕 **Latest 2025 release** from Alibaba - cutting-edge architecture
-- 🧠 **GPT-4 level reasoning** for fraud pattern analysis
+- 🧠 **Advanced MoE reasoning** for fraud pattern analysis
 - 💾 **5.2GB model** fits perfectly in 8GB VRAM (RTX 4070)
 - 🔒 **100% offline** - your data NEVER leaves your machine
 - 💰 **Zero API costs** - runs completely free forever

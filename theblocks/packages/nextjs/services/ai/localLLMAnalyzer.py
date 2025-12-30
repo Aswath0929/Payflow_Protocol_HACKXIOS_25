@@ -115,7 +115,7 @@ class Qwen3LocalAnalyzer:
     Local LLM Analyzer using Qwen3 via Ollama.
     
     Runs entirely on your RTX 4070 GPU - no cloud API needed!
-    Provides GPT-4 level reasoning for fraud detection, 100% offline.
+    Provides advanced MoE reasoning for fraud detection, 100% offline.
     """
     
     SYSTEM_PROMPT = """You are an expert financial crime analyst specializing in cryptocurrency and stablecoin fraud detection for the PayFlow Protocol.

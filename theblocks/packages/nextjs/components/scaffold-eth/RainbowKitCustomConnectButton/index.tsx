@@ -27,6 +27,20 @@ export const RainbowKitCustomConnectButton = () => {
           ? getBlockExplorerAddressLink(targetNetwork, account.address)
           : undefined;
 
+        // Prevent hydration mismatch by not rendering until mounted
+        if (!mounted) {
+          return (
+            <button
+              className="px-6 py-2.5 rounded-xl font-medium bg-gradient-to-r from-violet-600 to-cyan-600 text-white opacity-50 cursor-wait"
+              type="button"
+              disabled
+              aria-hidden="true"
+            >
+              Connect Wallet
+            </button>
+          );
+        }
+
         return (
           <>
             {(() => {

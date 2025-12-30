@@ -436,7 +436,7 @@ The Expert AI Oracle v3.0 provides real-time fraud detection integrated with the
 │   │  │   Neural Net  │  │   Typology    │  │   Qwen3:8b Local LLM     │ │  │
 │   │  │   (25% wt)    │  │   Detector    │  │   (30% wt - GPU)         │ │  │
 │   │  │               │  │   (25% wt)    │  │                          │ │  │
-│   │  │ • MLP 13→64→4 │  │ • 15 patterns │  │ • GPT-4 level reasoning  │ │  │
+│   │  │ • MLP 13→64→4 │  │ • 15 patterns │  │ • Advanced MoE reasoning │ │  │
 │   │  │ • Autoencoder │  │ • Mixing      │  │ • Chain-of-thought       │ │  │
 │   │  │ • <5ms        │  │ • Layering    │  │ • ~3s inference          │ │  │
 │   │  └───────────────┘  └───────────────┘  └──────────────────────────┘ │  │

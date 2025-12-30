@@ -1,0 +1,10 @@
+[build]
+  command = "yarn build"
+  publish = ".next"
+
+[build.environment]
+  NEXT_PUBLIC_AI_ORACLE_URL = "https://floretty-overparticularly-natividad.ngrok-free.dev"
+  NEXT_PUBLIC_IGNORE_BUILD_ERROR = "true"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"

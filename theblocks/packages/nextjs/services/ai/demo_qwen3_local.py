@@ -225,7 +225,7 @@ async def main():
     ✅ 100% LOCAL - No data leaves your machine
     ✅ No API keys or cloud costs
     ✅ Real-time inference on RTX 4070
-    ✅ GPT-4 level reasoning with Qwen3
+    ✅ Advanced MoE reasoning with Qwen3
     ✅ Cryptographic proof of all decisions
     
     Ready for Hackxios 2K25! 🚀

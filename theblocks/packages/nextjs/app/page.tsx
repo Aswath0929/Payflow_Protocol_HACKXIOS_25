@@ -218,14 +218,15 @@ export default function Home() {
             <div
               className={`flex items-center gap-3 transition-all duration-700 delay-200 ${isLoaded ? "opacity-100 translate-x-0" : "opacity-0 translate-x-4"}`}
             >
-              <button
-                onClick={() => router.push("/dashboard")}
-                className="relative px-5 py-2 rounded-full text-sm font-medium overflow-hidden group hidden sm:block"
+              <Link
+                href="/dashboard"
+                prefetch
+                className="relative px-5 py-2 rounded-full text-sm font-medium overflow-hidden group hidden sm:block focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:ring-offset-2 focus:ring-offset-zinc-900"
               >
                 <span className="absolute inset-0 bg-gradient-to-r from-violet-600 to-cyan-600 transition-all duration-300 group-hover:scale-105" />
                 <span className="absolute inset-0 bg-gradient-to-r from-violet-600 to-cyan-600 blur-xl opacity-50 transition-all duration-300 group-hover:opacity-80" />
                 <span className="relative text-white text-sm">Launch App →</span>
-              </button>
+              </Link>
               <RainbowKitCustomConnectButton />
             </div>
           </div>

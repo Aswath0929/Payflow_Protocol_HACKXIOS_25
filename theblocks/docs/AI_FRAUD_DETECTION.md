@@ -5,19 +5,19 @@
 [![Hackxios 2K25](https://img.shields.io/badge/Hackxios-2K25-blue)](https://hackxios.com)
 [![Solidity](https://img.shields.io/badge/Solidity-0.8.20-363636)](https://soliditylang.org/)
 [![Python](https://img.shields.io/badge/Python-3.11+-3776AB)](https://python.org)
-[![OpenAI](https://img.shields.io/badge/OpenAI-GPT--4-412991)](https://openai.com)
+[![Qwen3](https://img.shields.io/badge/Qwen3-MoE_LLM-6366f1)](https://qwenlm.github.io/)
 
 ---
 
 ## 🎯 Executive Summary
 
-The PayFlow AI Fraud Detection System is a **production-ready, cryptographically secure** fraud detection infrastructure designed specifically for stablecoin payment ecosystems. It combines the intelligence of GPT-4 with the speed of local ML models and the security of on-chain cryptographic verification.
+The PayFlow AI Fraud Detection System is a **production-ready, cryptographically secure** fraud detection infrastructure designed specifically for stablecoin payment ecosystems. It combines the intelligence of Qwen3 MoE LLM with the speed of local ML models and the security of on-chain cryptographic verification.
 
 ### Key Innovation Points
 
 | Feature | Traditional Systems | PayFlow AI Oracle |
 |---------|---------------------|-------------------|
-| **AI Integration** | Rule-based heuristics | GPT-4 + Isolation Forest hybrid |
+| **AI Integration** | Rule-based heuristics | Qwen3 MoE + Isolation Forest hybrid |
 | **Latency** | 500ms+ | <100ms (ML fast path) |
 | **Verification** | Trusted server | Cryptographic signatures (ECDSA) |
 | **On-chain** | Centralized oracle | Decentralized verification |
@@ -25,8 +25,8 @@ The PayFlow AI Fraud Detection System is a **production-ready, cryptographically
 
 ### Core Features
 
-- **Real-time transaction analysis** (<100ms latency with local ML, <500ms with GPT-4)
-- **Multi-model ensemble scoring** (6 specialized analyzers + GPT-4)
+- **Real-time transaction analysis** (<100ms latency with local ML, <500ms with Qwen3 MoE)
+- **Multi-model ensemble scoring** (6 specialized analyzers + Qwen3 MoE)
 - **Cryptographic signatures** (ECDSA) for on-chain verification
 - **On-chain enforcement** via SecureFraudOracle smart contract
 - **Real-time WebSocket monitoring** for live transaction feeds

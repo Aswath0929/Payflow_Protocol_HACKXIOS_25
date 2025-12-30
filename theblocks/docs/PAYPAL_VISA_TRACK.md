@@ -248,7 +248,7 @@ KEY KNOWLEDGE:
 
 ### 3.2 Local Training (Privacy-First)
 
-Unlike generic ChatGPT wrappers, our agent:
+Unlike generic cloud AI wrappers, our agent:
 
 - **Runs 100% locally** on Qwen3:8B via Ollama
 - **No cloud APIs** - data never leaves user's machine

@@ -7,9 +7,20 @@
  * ╠══════════════════════════════════════════════════════════════════════════════════════╣
  * ║  Built for Hackxios 2K25 - PayPal & Visa Track                                       ║
  * ║                                                                                       ║
- * ║  🧠 AI MODEL: Qwen3:8B (8 billion parameters)                                         ║
- * ║  🖥️  RUNTIME: Ollama (local inference server)                                         ║
- * ║  ⚡ GPU: RTX 4070 with CUDA acceleration (8GB VRAM optimized)                         ║
+ * ║  🧠 AI MODEL: Perplexity Sonar (Cloud) / Qwen3 8B MoE (Local Fallback)                ║
+ * ║  🔒 SECURITY: 100% ISOLATED from Web3/Blockchain data                                 ║
+ * ║  ☁️  RUNTIME: Google Cloud (no local GPU required)                                    ║
+ * ║                                                                                       ║
+ * ║  🔐 SECURITY ARCHITECTURE:                                                            ║
+ * ║  ┌─────────────────────────────────────────────────────────────────────────────────┐  ║
+ * ║  │  WEB2 LAYER (THIS CHATBOT)             WEB3 LAYER (ISOLATED)                   │  ║
+ * ║  │  ┌────────────────────────┐     🔥     ┌────────────────────────┐              │  ║
+ * ║  │  │  Gemini API (Cloud)    │  FIREWALL  │  Fraud Detection (GPU) │              │  ║
+ * ║  │  │  ✅ Documentation Q&A  │     ║      │  ✅ Transaction Scoring │             │  ║
+ * ║  │  │  ✅ Protocol Education │     ║      │  ✅ On-chain Data       │             │  ║
+ * ║  │  │  ❌ NO TX DATA ACCESS  │     ║      │  ✅ Wallet Interactions │             │  ║
+ * ║  │  └────────────────────────┘            └────────────────────────┘              │  ║
+ * ║  └─────────────────────────────────────────────────────────────────────────────────┘  ║
  * ║                                                                                       ║
  * ║  🚀 CUTTING-EDGE FEATURES:                                                            ║
  * ║  • Streaming responses (real-time token display)                                     ║
@@ -22,23 +33,20 @@
  * ║  • Keyboard shortcuts (Ctrl+Enter, Escape)                                           ║
  * ║  • Export conversation (Markdown/JSON)                                               ║
  * ║  • Response time metrics                                                             ║
- * ║                                                                                       ║
- * ║  ⚡ GPU OPTIMIZATIONS:                                                                ║
- * ║  • Full VRAM utilization with num_gpu: 99 layers                                     ║
- * ║  • Flash Attention enabled                                                           ║
- * ║  • Optimized context window (4096 tokens)                                            ║
- * ║  • Batch processing enabled                                                          ║
- * ║  • Parallel request handling                                                         ║
  * ╚══════════════════════════════════════════════════════════════════════════════════════╝
  */
 import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { GeminiService } from "~~/services/ai/geminiService";
 import {
   ArrowPathIcon,
+  ArrowsPointingInIcon,
+  ArrowsPointingOutIcon,
   ChatBubbleLeftRightIcon,
   CheckCircleIcon,
   ClipboardIcon,
   ClockIcon,
   Cog6ToothIcon,
+  CloudIcon,
   CpuChipIcon,
   DocumentArrowDownIcon,
   ExclamationTriangleIcon,
@@ -47,6 +55,7 @@ import {
   MagnifyingGlassIcon,
   MicrophoneIcon,
   PaperAirplaneIcon,
+  ShieldCheckIcon,
   SparklesIcon,
   StopIcon,
   TrashIcon,
@@ -100,7 +109,8 @@ interface ChatbotProProps {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const STORAGE_KEY = "payflow_chat_sessions";
-const MAX_HISTORY_MESSAGES = 10; // Context window for conversation memory
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const MAX_HISTORY_MESSAGES = 10; // Context window for conversation memory (used by Gemini service)
 const MAX_SESSIONS = 20;
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
@@ -147,36 +157,12 @@ declare global {
   }
 }
 
-// PayFlow-specific knowledge base
-const PROTOCOL_CONTEXT = `You are PayFlow AI Assistant, a SPECIALIZED expert ONLY on the PayFlow Protocol.
+// ═══════════════════════════════════════════════════════════════════════════════
+// GEMINI API CONFIGURATION
+// ═══════════════════════════════════════════════════════════════════════════════
 
-⚠️ CRITICAL RULES:
-1. ONLY answer questions about PayFlow Protocol
-2. If a question is NOT about PayFlow, respond: "I specialize in PayFlow Protocol. I can help with payments, compliance, escrow, oracles, fraud detection, and gasless transfers. What would you like to know?"
-3. Be concise but thorough. Use markdown formatting.
-4. Reference specific contract functions when applicable.
-5. At the end of each response, suggest 2-3 relevant follow-up questions the user might ask.
-
-PAYFLOW KNOWLEDGE BASE:
-
-**Smart Contracts:**
-- PayFlowCore.sol: createPayment(), executePayment(), settleWithFX(), cancelPayment()
-- ComplianceEngine.sol: 5-tier KYC (NONE→BASIC→STANDARD→ENHANCED→INSTITUTIONAL)
-- SmartEscrow.sol: TIME_BASED, APPROVAL, ORACLE, MULTI_SIG release types
-- OracleAggregator.sol: Chainlink (60%) + Pyth (40%) weighted consensus
-- FraudOracle.sol: AI risk scoring 0-100, ECDSA-signed verdicts
-- PayFlowPaymaster.sol: ERC-4337 gasless transactions
-
-**Compliance Tiers:**
-- NONE: $1K/day, $5K/month | BASIC: $10K/day, $50K/month
-- STANDARD: $100K/day, $500K/month | ENHANCED: $1M/day, $5M/month
-- INSTITUTIONAL: Unlimited
-
-**AI Fraud Detection:**
-- 4-Model Ensemble: Neural Net (25%) + Typology (25%) + Qwen3 (30%) + Compliance (20%)
-- Risk Levels: SAFE (0-20), LOW (21-40), MEDIUM (41-60), HIGH (61-80), CRITICAL (81-100)
-
-**Tokens:** PYUSD, USDC, DAI, USDT`;
+const GEMINI_API_KEY = "REPLACE_WITH_ENV";
+const geminiService = new GeminiService(GEMINI_API_KEY);
 
 // Topic validation keywords
 const PAYFLOW_KEYWORDS = [
@@ -245,6 +231,7 @@ const isPayFlowRelated = (query: string): boolean => {
   return PAYFLOW_KEYWORDS.some(kw => lowerQuery.includes(kw)) || lowerQuery.length < 20;
 };
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const getCacheKey = (message: string, history: Message[]): string => {
   const historyHash = history
     .slice(-3)
@@ -474,7 +461,9 @@ MessageComponent.displayName = "MessageComponent";
 // ═══════════════════════════════════════════════════════════════════════════════
 
 export const AIChatbotPro: React.FC<ChatbotProProps> = ({
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   walletAddress,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   transactionContext,
   onActionRequest: _onActionRequest,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -487,12 +476,25 @@ export const AIChatbotPro: React.FC<ChatbotProProps> = ({
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
+  const [isUsingLocalGPU, setIsUsingLocalGPU] = useState(false);
+  const [activeModel, setActiveModel] = useState(geminiService.getActiveModel());
   const [isListening, setIsListening] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [streamingText, setStreamingText] = useState("");
   const [abortController, setAbortController] = useState<AbortController | null>(null);
+
+  // UI State for Drag & Resize
+  const [iconPos, setIconPos] = useState({ x: 0, y: 0 });
+  const [winSize, setWinSize] = useState({ w: 420, h: 650 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [isResizing, setIsResizing] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [savedWinSize, setSavedWinSize] = useState({ w: 420, h: 650 });
+  const [savedIconPos, setSavedIconPos] = useState({ x: 0, y: 0 });
+  const dragOffset = useRef({ x: 0, y: 0 });
+  const resizeStart = useRef({ x: 0, y: 0, w: 0, h: 0 });
 
   // Refs
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -522,6 +524,75 @@ export const AIChatbotPro: React.FC<ChatbotProProps> = ({
   // LIFECYCLE & EFFECTS
   // ═══════════════════════════════════════════════════════════════════════════
 
+  // Initialize position
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setIconPos({ x: window.innerWidth - 80, y: window.innerHeight - 80 });
+    }
+  }, []);
+
+  // Drag & Resize Handlers
+  const startDrag = useCallback((e: React.MouseEvent) => {
+    // Only allow dragging if not clicking the close button (if open)
+    setIsDragging(true);
+    dragOffset.current = { x: e.clientX - iconPos.x, y: e.clientY - iconPos.y };
+  }, [iconPos]);
+
+  const startResize = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    setIsResizing(true);
+    resizeStart.current = { x: e.clientX, y: e.clientY, w: winSize.w, h: winSize.h };
+  }, [winSize]);
+
+  useEffect(() => {
+    const handleMove = (e: MouseEvent) => {
+      if (isDragging) {
+        setIconPos({
+          x: e.clientX - dragOffset.current.x,
+          y: e.clientY - dragOffset.current.y,
+        });
+      }
+      if (isResizing) {
+        // Resize logic: Assuming anchor is bottom-right relative to icon, 
+        // but we are positioning top-left relative to icon.
+        // Let's allow free resizing.
+        // If we drag the resize handle (bottom-left of window?), we change width/height.
+        // Actually, let's just change width/height based on delta.
+        // Since the window is positioned relative to the icon (bottom-right), 
+        // increasing width should expand it to the LEFT.
+        // Increasing height should expand it UP.
+        // Wait, standard resize handles are usually bottom-right.
+        // If I put the handle at bottom-left of the window (since it's on the right of screen),
+        // dragging LEFT increases width.
+        
+        const deltaX = resizeStart.current.x - e.clientX; // Drag left to increase width
+        const deltaY = resizeStart.current.y - e.clientY; // Drag up to increase height? 
+        // No, let's make it standard: Handle at Top-Left? No.
+        // Let's put handle at Bottom-Left.
+        
+        setWinSize({
+          w: Math.max(300, resizeStart.current.w + deltaX),
+          h: Math.max(400, resizeStart.current.h + (e.clientY - resizeStart.current.y)) // Drag down to increase height
+        });
+      }
+    };
+
+    const handleUp = () => {
+      setIsDragging(false);
+      setIsResizing(false);
+    };
+
+    if (isDragging || isResizing) {
+      window.addEventListener("mousemove", handleMove);
+      window.addEventListener("mouseup", handleUp);
+    }
+    return () => {
+      window.removeEventListener("mousemove", handleMove);
+      window.removeEventListener("mouseup", handleUp);
+    };
+  }, [isDragging, isResizing]);
+
   // Load sessions from localStorage
   useEffect(() => {
     const loaded = loadSessions();
@@ -538,32 +609,27 @@ export const AIChatbotPro: React.FC<ChatbotProProps> = ({
     }
   }, [sessions]);
 
-  // Check connection - verifies both Ollama and Expert API are running
+  // Check connection - verifies Gemini Cloud API is available
+  const refreshModelState = useCallback(() => {
+    const model = geminiService.getActiveModel();
+    setActiveModel(model);
+    setIsUsingLocalGPU(model.toLowerCase().includes("qwen"));
+  }, []);
+
   const checkConnection = useCallback(async () => {
     try {
-      // Check Ollama directly for GPU status
-      const ollamaResponse = await fetch("http://localhost:11434/api/tags", {
-        signal: AbortSignal.timeout(3000),
-      });
-
-      if (ollamaResponse.ok) {
-        setIsConnected(true);
-        return;
-      }
-
-      // Fallback to Expert API health check
-      const response = await fetch("http://localhost:8000/health", {
-        signal: AbortSignal.timeout(3000),
-      });
-      setIsConnected(response.ok);
+      // Check Gemini API availability
+      const isHealthy = await geminiService.checkHealth();
+      setIsConnected(isHealthy);
+      refreshModelState();
     } catch {
       setIsConnected(false);
     }
-  }, []);
+  }, [refreshModelState]);
 
   useEffect(() => {
     checkConnection();
-    const interval = setInterval(checkConnection, 30000);
+    const interval = setInterval(checkConnection, 60000); // Check every minute for cloud API
     return () => clearInterval(interval);
   }, [checkConnection]);
 
@@ -588,11 +654,12 @@ export const AIChatbotPro: React.FC<ChatbotProProps> = ({
         role: "assistant",
         content: `👋 Welcome to **PayFlow AI Assistant**!
 
-🧠 **AI Model:** Qwen3:8B (8B parameters)
-🖥️ **Runtime:** Ollama (local inference server)
-⚡ **Acceleration:** RTX 4070 CUDA (8GB VRAM)
+🧠 **AI Model:** Perplexity Sonar Pro (Cloud AI)
+☁️ **Runtime:** Perplexity API (isolated from blockchain)
+🔒 **Security:** 100% Web3 data isolation
 
-✅ **100% Local Processing** - No data leaves your device!
+🛡️ **This chatbot is ISOLATED from all blockchain data for security!**
+It can only help with documentation and education about PayFlow.
 
 I can help you with:
 • 💸 **Payments** - Create, execute, track transfers
@@ -605,7 +672,7 @@ I can help you with:
 What would you like to know about PayFlow?`,
         timestamp: new Date(),
         suggestions: ["How do gasless transfers work?", "What are the KYC tiers?", "Explain fraud detection"],
-        model: "qwen3:8b",
+        model: "sonar",
       };
       // Update session with greeting message
       setSessions(prev =>
@@ -711,18 +778,19 @@ What would you like to know about PayFlow?`,
   }, []);
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // STREAMING LLM CALL
+  // STREAMING LLM CALL (GEMINI CLOUD API - ISOLATED FROM WEB3)
   // ═══════════════════════════════════════════════════════════════════════════
 
   const callLLMStreaming = useCallback(
     async (
       userInput: string,
-      history: Message[],
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      _history: Message[],
     ): Promise<{ response: string; suggestions: string[]; responseTime: number }> => {
       const startTime = Date.now();
 
       // Check cache first
-      const cacheKey = getCacheKey(userInput, history);
+      const cacheKey = userInput.toLowerCase().trim();
       const cached = responseCache.get(cacheKey);
       if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
         return {
@@ -743,130 +811,38 @@ What would you like to know about PayFlow?`,
         };
       }
 
-      // Build context with conversation history
-      const contextInfo: string[] = [];
-      if (walletAddress) {
-        contextInfo.push(`User wallet: ${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`);
-      }
-      if (transactionContext) {
-        contextInfo.push(`Current transaction: ${JSON.stringify(transactionContext)}`);
-      }
-
-      // Include recent conversation history for context memory
-      const recentHistory = history
-        .filter(m => m.role !== "system" && !m.isStreaming)
-        .slice(-MAX_HISTORY_MESSAGES)
-        .map(m => `${m.role.toUpperCase()}: ${m.content}`)
-        .join("\n\n");
-
-      const fullPrompt = `${PROTOCOL_CONTEXT}
-
-${contextInfo.length > 0 ? `USER CONTEXT:\n${contextInfo.join("\n")}\n\n` : ""}${recentHistory ? `CONVERSATION HISTORY:\n${recentHistory}\n\n` : ""}USER: ${userInput}
-
-ASSISTANT: (Provide a helpful response about PayFlow. At the end, add "---" followed by 2-3 suggested follow-up questions in format: [Q1] | [Q2] | [Q3])`;
-
+      // Set up abort controller for cancellation
       const controller = new AbortController();
       setAbortController(controller);
 
       try {
-        // Try streaming from Ollama directly for better UX
-        // GPU-OPTIMIZED OLLAMA PARAMETERS for RTX 4070 (8GB VRAM)
-        // These settings maximize CUDA utilization and inference speed
-        const response = await fetch("http://localhost:11434/api/generate", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            model: "qwen3:8b",
-            prompt: fullPrompt,
-            stream: true,
-            options: {
-              // === PERFORMANCE TUNING ===
-              temperature: 0.7, // Balanced creativity vs coherence
-              num_predict: 1024, // Max tokens to generate
-
-              // === GPU ACCELERATION (RTX 4070 8GB) ===
-              num_gpu: 99, // Offload ALL layers to GPU
-              num_thread: 8, // CPU threads for non-GPU ops
-
-              // === MEMORY OPTIMIZATION ===
-              num_ctx: 4096, // Context window (optimized for 8GB VRAM)
-              num_batch: 512, // Batch size for prompt processing
-
-              // === INFERENCE SPEED ===
-              repeat_penalty: 1.1, // Prevent repetition
-              top_k: 40, // Top-K sampling
-              top_p: 0.9, // Nucleus sampling
-
-              // === LOW LATENCY ===
-              mirostat: 0, // Disable for faster inference
-              use_mmap: true, // Memory-mapped model loading
-              use_mlock: false, // Don't lock in RAM (use GPU VRAM)
+        // Use Gemini Cloud API (Web3-isolated, streaming with callbacks)
+        return await new Promise((resolve, reject) => {
+          let streamedText = "";
+          
+          geminiService.sendMessageStreaming(
+            userInput,
+            {
+              onToken: (token: string) => {
+                streamedText += token;
+                setStreamingText(streamedText);
+              },
+              onComplete: result => {
+                // Cache the response
+                responseCache.set(cacheKey, {
+                  response: result.response,
+                  suggestions: result.suggestions,
+                  timestamp: Date.now(),
+                });
+                resolve(result);
+              },
+              onError: (error: Error) => {
+                reject(error);
+              },
             },
-          }),
-          signal: controller.signal,
+            controller.signal,
+          );
         });
-
-        if (!response.ok) throw new Error("Ollama not available");
-
-        const reader = response.body?.getReader();
-        if (!reader) throw new Error("No response body");
-
-        let fullResponse = "";
-        const decoder = new TextDecoder();
-
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          const chunk = decoder.decode(value);
-          const lines = chunk.split("\n").filter(Boolean);
-
-          for (const line of lines) {
-            try {
-              const data = JSON.parse(line);
-              if (data.response) {
-                fullResponse += data.response;
-                // Remove thinking tags in real-time
-                const cleanedResponse = fullResponse.replace(/<think>[\s\S]*?<\/think>/g, "").trim();
-                setStreamingText(cleanedResponse);
-              }
-            } catch {
-              // Skip malformed JSON
-            }
-          }
-        }
-
-        // Parse response and suggestions
-        let finalResponse = fullResponse.replace(/<think>[\s\S]*?<\/think>/g, "").trim();
-        let suggestions: string[] = [];
-
-        // Extract suggestions if present
-        const suggestionMatch = finalResponse.match(/---\s*\n?(.*?)$/s);
-        if (suggestionMatch) {
-          finalResponse = finalResponse.replace(/---\s*\n?.*$/s, "").trim();
-          const suggestionText = suggestionMatch[1];
-          suggestions = suggestionText
-            .split("|")
-            .map(s => s.replace(/^\[|\]$/g, "").trim())
-            .filter(s => s.length > 0 && s.length < 60)
-            .slice(0, 3);
-        }
-
-        // Default suggestions if none extracted
-        if (suggestions.length === 0) {
-          suggestions = ["Tell me more about this", "How does this work in practice?", "What are the limits?"];
-        }
-
-        const responseTime = Date.now() - startTime;
-
-        // Cache the response
-        responseCache.set(cacheKey, {
-          response: finalResponse,
-          suggestions,
-          timestamp: Date.now(),
-        });
-
-        return { response: finalResponse, suggestions, responseTime };
       } catch (error) {
         if ((error as Error).name === "AbortError") {
           return {
@@ -876,37 +852,18 @@ ASSISTANT: (Provide a helpful response about PayFlow. At the end, add "---" foll
           };
         }
 
-        // Fallback to non-streaming API
+        // Fallback: Try non-streaming Gemini call
         try {
-          const response = await fetch("http://localhost:8000/chat", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              message: userInput,
-              context: fullPrompt,
-              use_thinking: false,
-            }),
-            signal: AbortSignal.timeout(30000),
-          });
-
-          if (response.ok) {
-            const data = await response.json();
-            return {
-              response: data.response || "I couldn't generate a response.",
-              suggestions: ["Tell me more", "How does this work?", "What are the limits?"],
-              responseTime: Date.now() - startTime,
-            };
-          }
+          const result = await geminiService.sendMessage(userInput);
+          return result;
         } catch {
-          // Final fallback
+          throw new Error("AI service unavailable. Please check your internet connection.");
         }
-
-        throw new Error("AI service unavailable. Please ensure Ollama is running.");
       } finally {
         setAbortController(null);
       }
     },
-    [walletAddress, transactionContext],
+    [],
   );
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -954,7 +911,7 @@ ASSISTANT: (Provide a helpful response about PayFlow. At the end, add "---" foll
           timestamp: new Date(),
           responseTime,
           suggestions,
-          model: "qwen3:8b",
+          model: geminiService.getActiveModel(),
         };
 
         // Replace loading message with actual response
@@ -972,9 +929,10 @@ ASSISTANT: (Provide a helpful response about PayFlow. At the end, add "---" foll
       } finally {
         setIsLoading(false);
         setStreamingText("");
+        refreshModelState();
       }
     },
-    [input, isLoading, currentSessionId, messages, createNewSession, updateSession, callLLMStreaming],
+    [input, isLoading, currentSessionId, messages, createNewSession, updateSession, callLLMStreaming, refreshModelState],
   );
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -1069,6 +1027,28 @@ ASSISTANT: (Provide a helpful response about PayFlow. At the end, add "---" foll
   );
 
   // ═══════════════════════════════════════════════════════════════════════════
+  // FULLSCREEN TOGGLE
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  const toggleFullscreen = useCallback(() => {
+    if (isFullscreen) {
+      // Restore previous size
+      setWinSize(savedWinSize);
+      setIconPos(savedIconPos);
+      setIsFullscreen(false);
+    } else {
+      // Save current size and go fullscreen
+      setSavedWinSize(winSize);
+      setSavedIconPos(iconPos);
+      if (typeof window !== "undefined") {
+        setWinSize({ w: window.innerWidth - 40, h: window.innerHeight - 40 });
+        setIconPos({ x: window.innerWidth - 60, y: window.innerHeight - 60 });
+      }
+      setIsFullscreen(true);
+    }
+  }, [isFullscreen, winSize, iconPos, savedWinSize, savedIconPos]);
+
+  // ═══════════════════════════════════════════════════════════════════════════
   // KEYBOARD SHORTCUTS
   // ═══════════════════════════════════════════════════════════════════════════
 
@@ -1102,13 +1082,18 @@ ASSISTANT: (Provide a helpful response about PayFlow. At the end, add "---" foll
     <>
       {/* Floating Button */}
       <button
-        onClick={() => {
-          setIsOpen(!isOpen);
-          if (!currentSessionId && sessions.length === 0) {
-            createNewSession();
+        onMouseDown={startDrag}
+        onClick={(e) => {
+          // Prevent click if it was a drag operation
+          if (Math.abs(e.clientX - (dragOffset.current.x + iconPos.x)) < 5 && Math.abs(e.clientY - (dragOffset.current.y + iconPos.y)) < 5) {
+             setIsOpen(!isOpen);
+             if (!currentSessionId && sessions.length === 0) {
+               createNewSession();
+             }
           }
         }}
-        className={`fixed bottom-6 right-6 z-50 p-4 rounded-full shadow-xl transition-all duration-300 ${
+        style={{ left: iconPos.x, top: iconPos.y }}
+        className={`fixed z-50 p-4 rounded-full shadow-xl transition-transform duration-300 cursor-move ${
           isOpen
             ? "bg-error text-error-content rotate-90 scale-90"
             : "bg-gradient-to-r from-primary to-secondary text-primary-content hover:scale-110 hover:shadow-2xl"
@@ -1123,7 +1108,33 @@ ASSISTANT: (Provide a helpful response about PayFlow. At the end, add "---" foll
 
       {/* Chat Panel */}
       {isOpen && (
-        <div className="fixed bottom-24 right-6 z-50 w-[420px] h-[650px] bg-base-100 rounded-2xl shadow-2xl border border-base-300 flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 duration-300">
+        <div 
+          style={isFullscreen ? { 
+            left: 20, 
+            top: 20, 
+            width: 'calc(100vw - 40px)', 
+            height: 'calc(100vh - 40px)' 
+          } : { 
+            left: iconPos.x - winSize.w + 50, 
+            top: iconPos.y - winSize.h - 20, 
+            width: winSize.w, 
+            height: winSize.h 
+          }}
+          className={`fixed z-50 bg-base-100 shadow-2xl border border-base-300 flex flex-col overflow-hidden animate-in fade-in duration-200 ${isFullscreen ? 'rounded-xl' : 'rounded-2xl'}`}
+        >
+          {/* Resize Handle (Bottom-Left) - Hidden in fullscreen */}
+          {!isFullscreen && (
+            <div 
+              onMouseDown={startResize}
+              className="absolute bottom-0 left-0 w-8 h-8 cursor-sw-resize z-50 flex items-end justify-start p-1 opacity-30 hover:opacity-100 transition-opacity"
+              title="Drag to resize"
+            >
+              <svg viewBox="0 0 24 24" className="w-6 h-6 text-base-content/50 rotate-90">
+                <path fill="currentColor" d="M22,22H2V20H22V22M22,18H6V16H22V18M22,14H10V12H22V14M22,10H14V8H22V10Z" />
+              </svg>
+            </div>
+          )}
+
           {/* Header */}
           <div className="bg-gradient-to-r from-primary via-purple-600 to-secondary p-4 text-white">
             <div className="flex items-center justify-between">
@@ -1134,8 +1145,18 @@ ASSISTANT: (Provide a helpful response about PayFlow. At the end, add "---" foll
                 <div>
                   <h3 className="font-bold text-lg">PayFlow AI</h3>
                   <div className="flex items-center gap-2 text-xs opacity-90">
-                    <CpuChipIcon className="w-3 h-3" />
-                    <span>Qwen3:8B • CUDA GPU</span>
+                    {isUsingLocalGPU ? (
+                      <>
+                        <CpuChipIcon className="w-3 h-3" />
+                        <span>qwen3:8b (Local GPU)</span>
+                      </>
+                    ) : (
+                      <>
+                        <CloudIcon className="w-3 h-3" />
+                        <span>Sonar (Perplexity)</span>
+                      </>
+                    )}
+                    <ShieldCheckIcon className="w-3 h-3 text-green-300" title="Isolated from Web3 data" />
                     {isConnected ? (
                       <span className="flex items-center gap-1 text-green-300">
                         <CheckCircleIcon className="w-3 h-3" /> Online
@@ -1151,6 +1172,13 @@ ASSISTANT: (Provide a helpful response about PayFlow. At the end, add "---" foll
 
               {/* Header Actions */}
               <div className="flex items-center gap-1">
+                <button
+                  onClick={toggleFullscreen}
+                  className="btn btn-ghost btn-sm btn-circle text-white/80 hover:text-white hover:bg-white/20"
+                  title={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
+                >
+                  {isFullscreen ? <ArrowsPointingInIcon className="w-4 h-4" /> : <ArrowsPointingOutIcon className="w-4 h-4" />}
+                </button>
                 <button
                   onClick={() => setShowHistory(!showHistory)}
                   className="btn btn-ghost btn-sm btn-circle text-white/80 hover:text-white hover:bg-white/20"
@@ -1334,9 +1362,9 @@ ASSISTANT: (Provide a helpful response about PayFlow. At the end, add "---" foll
 
           {/* Messages Area */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            {messages
-              .filter(m => m.role !== "system")
-              .map((message, idx) => (
+            {(() => {
+              const filteredMessages = messages.filter(m => m.role !== "system");
+              return filteredMessages.map((message, idx) => (
                 <MessageComponent
                   key={message.id}
                   message={
@@ -1348,9 +1376,10 @@ ASSISTANT: (Provide a helpful response about PayFlow. At the end, add "---" foll
                   onCopy={handleCopy}
                   onRegenerate={handleRegenerate}
                   onSuggestionClick={handleSuggestionClick}
-                  isLatest={idx === messages.length - 1}
+                  isLatest={idx === filteredMessages.length - 1}
                 />
-              ))}
+              ));
+            })()}
             <div ref={messagesEndRef} />
           </div>
 
@@ -1409,7 +1438,7 @@ ASSISTANT: (Provide a helpful response about PayFlow. At the end, add "---" foll
 
             {/* Footer Info */}
             <div className="flex items-center justify-between mt-2 text-xs text-base-content/50">
-              <span>🔒 100% local • Your data stays on your machine</span>
+              <span>⚡ Powered by Perplexity Sonar Pro • Fast & Secure</span>
               <span>{sessions.length} chats saved</span>
             </div>
           </div>

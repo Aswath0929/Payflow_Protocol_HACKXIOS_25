@@ -42,8 +42,8 @@ You're absolutely right to be concerned! Here's what can go wrong with naive AI 
 │  │               │                    │              │                      │  │
 │  │               │                    │              ▼                      │  │
 │  │               │                    │  ┌─────────────────────────────┐   │  │
-│  │               │                    │  │     Call OpenAI API        │   │  │
-│  │               │◀──signed result────│  │     (Key never leaves)     │   │  │
+│  │               │                    │  │   Call Qwen3 MoE Local LLM  │   │  │
+│  │               │◀──signed result────│  │   (RTX 4070 GPU - Offline)  │   │  │
 │  │               │                    │  └─────────────────────────────┘   │  │
 │  │               │                    │              │                      │  │
 │  │               │                    │              ▼                      │  │
@@ -90,10 +90,13 @@ Create a `.env` file for your backend (NEVER commit this!):
 ```bash
 # packages/nextjs/.env.local (for local development)
 
-# AI Provider API Keys (get from their websites)
-OPENAI_API_KEY=sk-proj-xxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-# Or use Anthropic
-ANTHROPIC_API_KEY=sk-ant-xxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+# Qwen3 MoE Local LLM (100% Offline - No API Key Needed!)
+# Start Ollama: ollama serve && ollama pull qwen3:8b
+QWEN3_MODEL=qwen3:8b
+OLLAMA_URL=http://localhost:11434
+
+# (Optional) Cloud AI Fallback
+# OPENAI_API_KEY=sk-proj-xxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 # Oracle Private Key (generate a NEW one, don't use your wallet!)
 ORACLE_PRIVATE_KEY=0x1234567890abcdef...
@@ -247,13 +250,15 @@ if (!backendAvailable) {
 2. Each signature hash is tracked on-chain
 3. Same signature cannot be submitted twice
 
-### Q: What if OpenAI is slow/unavailable?
-**A:** The backend has fallback to local heuristics:
+### Q: What if Qwen3 is not available?
+**A:** The system gracefully falls back:
 ```python
+# Qwen3 runs locally on your GPU (RTX 4070) - always available!
+# But if Ollama isn't running:
 try:
-    result = await ai_client.analyze_transaction_openai(data)
+    result = await ai_oracle.analyze_transaction(data, use_qwen3=True)
 except Exception:
-    result = ai_client.analyze_transaction_local(data)  # Fast fallback
+    result = await ai_oracle.analyze_transaction(data, use_qwen3=False)  # Neural Net only
 ```
 
 ## Files Created
@@ -266,11 +271,11 @@ except Exception:
 
 ## Next Steps
 
-1. ✅ Get OpenAI API key from https://platform.openai.com
+1. ✅ Start Ollama: `ollama serve && ollama pull qwen3:8b`
 2. ✅ Generate oracle private key (separate from your wallet!)
 3. ✅ Deploy SecureAIOracle contract
 4. ✅ Register oracle address in contract
-5. ✅ Start backend service
+5. ✅ Start backend service: `cd services/ai && uvicorn api:app --port 8080`
 6. ✅ Integrate hook in your payment flow
 
-For hackathon demo, you can use the "local" provider (no API key needed) to show the architecture works!
+**100% Offline!** Qwen3 MoE runs on your local GPU (RTX 4070) - no API keys needed!
