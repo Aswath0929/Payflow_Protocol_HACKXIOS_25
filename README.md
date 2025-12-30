@@ -24,6 +24,9 @@
 
 ---
 
+<img width="1600" height="1066" alt="image" src="https://github.com/user-attachments/assets/22219bca-951e-4b2d-91ec-ee26601b338e" />
+
+
 ## 📋 Table of Contents
 
 1. [Executive Summary](#-executive-summary)
